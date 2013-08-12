@@ -1,0 +1,6 @@
+exportPattern("^[[:alpha:]]+")
+import("rJava")
+import("flexmix")
+import("matlab")
+import("mclust")
+import("moments")
