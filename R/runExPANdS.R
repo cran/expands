@@ -74,12 +74,20 @@ dirF=getwd();
 ##ExomeSeq
 if (is.character(SNV) && file.exists(SNV)){
 	print(paste("Running ExPANdS on: ",SNV))
-	dm=as.matrix(read.table(SNV,sep="\t",header=TRUE))
+	dm=read.table(SNV,sep="\t",header=TRUE);
+	dm <- dm[ as.character(dm[,"chr"]) %in% as.character(seq(22)), ];
+	dm=data.matrix(dm);
+	print("Only SNVs with autosomal coordinates included.")
 	snvF=fileparts(SNV);
 	dirF=dirname(SNV); snvF=snvF$name;
 }else if (is.matrix(SNV)){
 	dm=SNV;
+	if (!is.numeric(dm)) {
+		print("SNV matrix has to be numeric. Likely cause: only mutations detected on autosomes accepted for ExPANdS model. Remove SNVs with allosomal and mitochondrial coordinates before you proceed.")
+		return();
+	}
 }
+
 if (is.character(CBS) && file.exists(CBS)){
 	copyNumber=as.matrix(read.table(CBS,sep="\t",header=TRUE))
 }else if (is.matrix(CBS)){
@@ -88,9 +96,20 @@ if (is.character(CBS) && file.exists(CBS)){
 dm=assignQuantityToMutation(dm,copyNumber,"CN_Estimate");
 ii=which(is.na(dm[,"CN_Estimate"]));
 if (length(ii)>0){
-	print(paste(length(ii), " SNVs excluded due to unavailable copy number in that region."));
+	print(paste(length(ii), " SNV(s) excluded due to unavailable copy number in that region."));
 	dm=dm[-ii,];
 }
+ii=which(dm[,"CN_Estimate"]<1);
+if (length(ii)>0){
+        print(paste(length(ii), " SNV(s) excluded due to homozygous deletions within that region."));
+        dm=dm[-ii,];
+}
+ii=which(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]<0.1);
+if (length(ii)>0){
+        print(paste(length(ii), " SNV(s) excluded due to AF*CN below 0.1 (SNV can't be explained by an SP present in 10% or more of the sample)."));
+        dm=dm[-ii,];
+}
+
 
 if (is.na(precision)){
    precision=0.1/log(nrow(dm)/7);

@@ -120,7 +120,7 @@ while (nrep>0){
 }
 
 if (length(allSPs)==0){
-	return(list("SPs"=c(),"spGrid"=c()))
+	return(NULL);
 }
 
 ##plot option

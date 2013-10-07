@@ -3,7 +3,7 @@
 \title{Subpopulation Visualization}
 \description{Plots coexistent subpopulations determined by ExPANdS.}
 \usage{
-plotSPs(dm, sampleID=NA)
+plotSPs(dm, sampleID=NA, cex=0.5)
 }
 \arguments{
   \item{dm}{
@@ -18,6 +18,10 @@ plotSPs(dm, sampleID=NA)
   \item{sampleID}{
 	The name of the sample in which the mutations have been detected.
 }
+  \item{cex}{
+	The amount by which plotting text and symbols should be magnified relative to the default. See also \code{help(par).}
+}
+
 }
 
 \value{

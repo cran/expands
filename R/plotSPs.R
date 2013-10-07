@@ -1,4 +1,4 @@
-plotSPs<-function(dm,sampleID=NA){
+plotSPs<-function(dm,sampleID=NA,cex=0.5){
 #PLOTSPS plots coexistent subpopulations determined by ExPANdS 
 #plotSPs(DM,sampleID) For each mutation (x-axis) the function displays: 
 #   > the SP to which the mutation has been assigned (squares)
@@ -33,7 +33,7 @@ ia=order(dm[,"SP"],decreasing = TRUE);dm=dm[ia,];
    yticklab=c(1:maxPloidy,seq(0,1,by=0.1));
    at=c(sort(c(1:maxPloidy)*-0.1),seq(0,1,by=0.1));
 
-   par(xpd=T, cex=2.5, cex.axis=2,cex.lab=1.35, cex.main=2,mar=par()$mar+c(0,0,0,4));
+   par(xpd=T, cex=cex, cex.axis=1/cex,cex.lab=1/cex, cex.main=1/cex,mar=par()$mar+c(0,0.5,0,4.2));
 #   plot.new(); 
    par(xpd=FALSE)
 
@@ -56,7 +56,7 @@ for (k in 1:nrow(dm)){
         legend1$text[length(legend1$text)+1]="SP";
         legend1$col[length(legend1$text)]=x[ci];
         par(xpd=TRUE)
-        legend("topright",legend1$text,fill=legend1$col,inset=c(-0.05,-0.02), cex=0.8)
+        legend("topright",legend1$text,fill=legend1$col,inset=c(-0.1,-0.02),cex=0.75/cex)
     }
 }
 .plotSPPerChr(dm,17,1,0,7);

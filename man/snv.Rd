@@ -9,8 +9,8 @@
 	 \bold{chr} - the chromosome \cr
 	 \bold{startpos} - genomic position \cr
 	 \bold{endpos} - same as above \cr
-	 \bold{REF} - the reference allele \cr
-	 \bold{ALT} - the B-allele \cr
+	 \bold{REF} - ASCII code of the reference nucleotide (in hg18/hg19) \cr
+	 \bold{ALT} - ASCII code of the B-allele nucleotide \cr
 	 \bold{AF_Tumor} - allele frequeny of B-allele \cr
 	 \bold{PN_B} - ploidy of B-allele in normal cells (1 if B-allele is a germline variant, 0 if the B-allele is a consequence of a somatic mutation)
 }
