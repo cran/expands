@@ -39,7 +39,7 @@ ia=order(dm[,"SP"],decreasing = TRUE);dm=dm[ia,];
 
    plot(c(1:length(at)),at, col="white",pch=8,xlim=c(0,nrow(dm)),
         yaxt="n", bty="L", main=sampleID, xlab="Mutation", 
-        ylab="Copy-number     Allele- or Cell-frequency");
+        ylab="Copy-number <---> Allele-frequency and SP size");
    axis(2, at, yticklab) 
 
 ia=order(dm[,"chr"]);dm=dm[ia,];

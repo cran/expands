@@ -1,12 +1,12 @@
 \name{assignQuantityToMutation}
 \alias{assignQuantityToMutation}
-\title{Quantity Assignment (Ploidy)}
-\description{Assigns a quantity to each mutated locus. Currently, the only assignable quantity is the average ploidy (among all cells) of the locus in which the mutation is embedded. Future releases will include the expression of the corresponding locus as estimated from RNA-Seq, as an additional assignable quantity. 
+\title{Quantity assignment (copy number) to mutations}
+\description{Assigns a quantity to each mutated locus. Currently, the only assignable quantity is the average ploidy (among all cells) of the locus in which the mutation is embedded. 
 }
 \usage{assignQuantityToMutation(dm, cbs, quantityColumnLabel="CN_Estimate")}
 \arguments{
   \item{dm}{
-	Matrix in which each row corrsponds to a mutation. Has to contain at least the following columnnames: \cr 
+	Matrix in which each row corrsponds to a mutation. Has to contain at least the following column names: \cr 
 	\bold{chr} - the chrmosome on which each mutation is located;\cr
 	\bold{startpos} - the genomic position of each mutation.
 }

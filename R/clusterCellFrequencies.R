@@ -28,7 +28,7 @@ while (nrep>0){
     	print(paste(100*(tRep-nrep)/tRep, "% completed"))
     }
     ##test each cluster for significance --> printlay SPs
-    spCols=c("Max Size","Mean Size","Mean Weighted","ttest","ttest_Mean","ttest_Sum","ttest_Kurtosis","kurtosis","kurtosisNoise","kurtosisMean","kurtosisNoiseMean","nMutations","x_p","score");
+    spCols=c("Max Size","Mean Size","Mean Weighted","wilcTest","wilcTest_Mean","wilcTest_Sum","wilcTest_Kurtosis","kurtosis","kurtosisNoise","kurtosisMean","kurtosisNoiseMean","nMutations","precision","score");
     SPs <- matrix(nrow = length(clIdx), ncol = length(spCols), byrow = TRUE, dimnames = list(paste(c(1:length(clIdx))), spCols))
     
     for (k in 1:length(clIdx)){
@@ -76,22 +76,22 @@ while (nrep>0){
         maxCl=apply(peakCl,2,mean,na.rm=T);
         x=apply(peakCl[,idx],1,max);
         y=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,max);
-        zz=t.test(x,y,conf.level=0.99,alternative="greater");
+        zz=wilcox.test(x,y,conf.level=0.99,alternative="greater");
         
 	x2=apply(peakCl[,idx],1,mean);
         y2=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,mean);  
-        zz2=t.test(x2,y2,conf.level=0.99,alternative="greater");
+        zz2=wilcox.test(x2,y2,conf.level=0.99,alternative="greater");
                 
         x3=apply(peakCl[,idx],1,sum);
         y3=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,sum);              
-        zz3=t.test(x3,y3,conf.level=0.99,alternative="greater");
+        zz3=wilcox.test(x3,y3,conf.level=0.99,alternative="greater");
         kurt=apply(peakCl[,idx],1,kurtosis);
         kurtNoise=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,kurtosis);
-        zzK=t.test(kurt,kurtNoise,conf.level=0.99,alternative="greater");
+        zzK=wilcox.test(kurt,kurtNoise,conf.level=0.99,alternative="greater");
        
 	SPs[k,]=c(peak,meanClPeak,wMean, zz$p.value,zz2$p.value,zz3$p.value,zzK$p.value,max(kurt),max(kurtNoise),mean(kurt),mean(kurtNoise),nrow(peakCl),precision, score);
 	##calculate score
-    	score=SPs[k,"ttest"]+SPs[k,"ttest_Mean"]+SPs[k,"ttest_Sum"]+1/log(SPs[k,"nMutations"]);
+    	score=SPs[k,"wilcTest"]+SPs[k,"wilcTest_Mean"]+SPs[k,"wilcTest_Sum"]+1/log(SPs[k,"nMutations"]);
     	if(!is.na(SPs[k,"kurtosisNoiseMean"])){
         	score=score+SPs[k,"kurtosisNoiseMean"]/500;
     	}else{
@@ -131,7 +131,7 @@ if (plotF>0){
 robSPs=.chooseRobustSPs(allSPs,precision);
 SPs=.collapseSimilar(robSPs$SPs,precision);
 
-outcols=c("Mean Weighted","score","x_p","nMutations");##printlay only these columns
+outcols=c("Mean Weighted","score","precision","nMutations");##printlay only these columns
 if (is.null(dim(SPs))){
 	SPs=SPs[outcols];
 }else{
@@ -158,16 +158,21 @@ return(wMean);
 ## DM contains the size and the p-value associated with a SP. DM is sorted
 ## in descending order of SP size.
 #count frequencies among predictions;
-freq=t(seq(0.1,1.1,by=precision));
+freq=t(seq(0.1,1,by=precision));
 SPsizes=matrix(nrow = length(allSPs), ncol = length(freq),
           dimnames = list(paste(c(1:length(allSPs))), freq))
 for (i in 1:length(allSPs)){
     SPs=allSPs[[i]];
     if(is.null(dim(SPs))){
+    	if(SPs["Mean Weighted"]>1){
+    		SPs["Mean Weighted"]=1; 
+	}
 	idx=which.min(abs(SPs["Mean Weighted"]-freq));
 	SPsizes[i,idx]=SPs["score"];
     }else{
-	sps=SPs[,"Mean Weighted"];
+         ##remove esthetically ugly artifact: SPs of size >1 are to be interpreted as SPs present in (nearly) all cells of the sequenced sample:
+    	 SPs[SPs[,"Mean Weighted"]>1,"Mean Weighted"]=1; 
+	 sps=SPs[,"Mean Weighted"];
    	 for (j in 1:length(sps)){
         	idx=which.min(abs(sps[j]-freq));
         	SPsizes[i,idx]=SPs[j,"score"];
@@ -220,7 +225,7 @@ spSize=unique(round(SPs[,"Mean Weighted"]*100)/100);
 for (n in 1:length(spSize)){
     idx=which(abs(SPs[,"Mean Weighted"]-spSize[n])<precision);
     if (length(idx)>1){
-        ia=which.min(SPs[idx,"ttest"]);
+        ia=which.min(SPs[idx,"wilcTest"]);
         rmIdx=setdiff(idx,idx[ia]);
         SPs=SPs[-rmIdx,];
     }

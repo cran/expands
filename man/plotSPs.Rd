@@ -26,10 +26,9 @@ plotSPs(dm, sampleID=NA, cex=0.5)
 
 \value{
 For each mutation (x-axis) the function displays:\cr
-	 - the subpopulation to which the mutation has been assigned (squares), \cr
-	 - the ploidy of the locus in that subpopulation and \cr
-	 - the allele frequency of the mutation. \cr
-Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars - somatic mutations, triangles - loss of heterozygosity). Subpopulations are colored based on the confidence with which the mutation has been assigned to the corresponding subpopulation (black - highest, white - lowest).
+     - the size of the subpopulation to which the mutation has been assigned (squares). Each square is colored based on the confidence with which the mutation has been assigned to the corresponding subpopulation (black - highest, white - lowest).\cr
+     - the ploidy of the mutated locus in that subpopulation (dots).\cr
+     - the allele frequency of the mutation. Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars - somatic mutations, triangles - loss of heterozygosity). 
 }
 
 \author{Noemi Andor}

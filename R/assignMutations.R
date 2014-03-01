@@ -1,12 +1,12 @@
 assignMutations<-function( dm, finalSPs,densities, max_PM=6){
 if(is.null(dim(finalSPs))){
-	precision=finalSPs["x_p"];
+	precision=finalSPs["precision"];
 	spFreq=finalSPs["Mean Weighted"];
 }else{
 	spFreq=finalSPs[,"Mean Weighted"];
-	precision=finalSPs[1,"x_p"];
+	precision=finalSPs[1,"precision"];
 }
-freq=t(seq(0.1,1.1,by=precision/10));
+freq=t(seq(0.1,1,by=precision/10));
 ##Assign mutations to SPs
 idx=matrix(NA,1,size(finalSPs,1));
 for (i in 1:size(finalSPs,1)){

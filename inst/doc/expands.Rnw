@@ -90,20 +90,49 @@ Now, all that remains to be done is to assign each mutated locus to one of the p
 aM= assignMutations( dm, SPs,cfd$densities)
 @
 \Robject{aM\$dm} contains the input matrix \Robject{snv} with two additional columns: \Robject{subpopulation} - the size of the subpopulation to which the mutation has been assigned; and \Robject{\%maxP} - confidence of the assignment.
+@
 
 \newpage
-\section{Visualization of predicted subpopulations}
-Finally we plot the coexistent subpopulations predicted in the previous steps.
+\subsection{Visualization of predicted subpopulations}
+Now we plot the coexistent subpopulations predicted in the previous steps.
 \begin{figure}[htbp]
 \begin{center}
-<<fig=TRUE, width=15, height=8>>=
-plotSPs(aM$dm, snvF,cex=1.9)
+<<fig=TRUE, width=10, height=6>>=
+plotSPs(aM$dm, snvF,cex=1)
 @
 \caption{\label{f4.3} 
 Coexistent subpopulations determined by ExPANdS in an Glioblastoma genome. Five subpopulations were identified based on the allele-frequency and copy number of 130 mutations detected within the cancer-genome. Subpopulations were present in 96\%, 71\%, 38\%, 28\% and 15\% of the sample (y-axis). For each of the 130 exonic mutations (x-axis) we show: - the subpopulation to which the mutation has been assigned (squares), - the ploidy of the locus in that subpopulation and - the allele frequency of the mutation. Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars - somatic SNVs, triangles - LOH). Subpopulations are colored based on the confidence with which the mutation has been assigned to the subpopulation (black - highest, white - lowest).
 }
 \end{center}
 \end{figure}
+
+\newpage
+\section{Inferring phylogenetic relationships between SPs}
+We model the tumor's phylogeny based on pairwise similarities between SPs. Pairwise phylogenetic distances between SPs are calculated from SP specific ploidy profiles. First we have to assign SP specific ploidies for the input genome segments obtained by CBS:
+<<>>=
+##assigning copy number to subpopulations
+aQ=assignQuantityToSP(cbs, aM$dm)
+@
+The phylogenetic tree \Robject{tr} is obtained by running a neighbor-joining tree estimation algorithm on pairwise phylogenetic distances between SPs: 
+<<>>=
+##building phylogeny
+tr=buildPhylo(aQ,snvF)
+@
+
+\newpage
+\subsection{Visualization of predicted phylogeny}
+Finally we plot the phyloegentic tree.
+\begin{figure}[htbp]
+\begin{center}
+<<fig=TRUE, width=15, height=8>>=
+plot(tr,cex=2.5)
+@
+\caption{\label{f4.3} 
+Phylogram representation of the inferred evolutionary relations between the four predicted SPs. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
+}
+\end{center}
+\end{figure}
+
 
 \section{Acknowledgements}
 Special thanks to Dr. Ruchira S. Datta for her valuable contributions to the structure and presentation of this manuscript.
