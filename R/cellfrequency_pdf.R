@@ -22,7 +22,7 @@ while (.jcall(fits,"Z","hasNext")){
 ##Keep only valid solutions
 fit=matrix(results, nrow = nrow(results), ncol = ncol(results), 
            dimnames = list(paste(1:nrow(results)), .jfield(expands,,"SOLUTION_ENTITIES")))
-fit=fit[fit[,"f"]>=0.1 & fit[,"f"]<=1.1,];
+fit=fit[fit[,"f"]>=freq[1] & fit[,"f"]<=1.1,];
 
 z=round(fit[,"f"]*100);
 z1=sort(unique(z));

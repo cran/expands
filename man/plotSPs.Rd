@@ -8,7 +8,7 @@ plotSPs(dm, sampleID=NA, cex=0.5)
 \arguments{
   \item{dm}{
 	 Matrix in which each row corrsponds to a mutation (for example, the matrix output by \code{\link{assignMutations}}). Has to contain at least the following columnnames:\cr
-        \bold{chr} - the chrmosome on which each mutation is located; \cr
+        \bold{chr} - the chromosome on which each mutation is located; \cr
         \bold{startpos} - the genomic position of each mutation;\cr
         \bold{AF_Tumor} - the allele-frequency of each mutation;\cr
         \bold{PN_B} - the ploidy of the B-allele in normal cells (binary variable: 1 if the mutation is a germline variant, 0 if somatic);\cr
@@ -27,7 +27,7 @@ plotSPs(dm, sampleID=NA, cex=0.5)
 \value{
 For each mutation (x-axis) the function displays:\cr
      - the size of the subpopulation to which the mutation has been assigned (squares). Each square is colored based on the confidence with which the mutation has been assigned to the corresponding subpopulation (black - highest, white - lowest).\cr
-     - the ploidy of the mutated locus in that subpopulation (dots).\cr
+     - the total ploidy of all alleles at the mutated genomic locus in that subpopulation (dots).\cr
      - the allele frequency of the mutation. Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars - somatic mutations, triangles - loss of heterozygosity). 
 }
 

@@ -1,11 +1,11 @@
-computeCellFrequencyDistributions<-function(dm, max_PM=6, precision ){
+computeCellFrequencyDistributions<-function(dm, max_PM=6, precision, min_CellFreq=0.1){
 
 print("Computing cell-frequency probability distributions...")
 ##add cell-frequency that best explains CN and AF to dm
 dm=.addColumn(dm,"f",NA);
 
 ##compute cell-freq-probability for each mutation
-freq=t(seq(0.1,1.1,by=precision/10));
+freq=t(seq(min_CellFreq,1.1,by=precision/10));
 densities=matrix(matrix(NA,nrow(dm),length(freq)),nrow=nrow(dm),ncol=length(freq),dimnames=list(1:nrow(dm),freq));
 success=0; 
 errors=c();

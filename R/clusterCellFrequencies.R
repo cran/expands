@@ -1,8 +1,8 @@
-clusterCellFrequencies <- function(densities, precision, plotF=0,label=NA,nrep=30){
-if(plotF>0 && !require(rgl)){
-	plotF=0;
-	message("Plot supressed:  Package rgl required for 3D plot of subpopulation clusters. Load this package befor using this option.")
-}
+clusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0.1){
+#if(plotF>0 && !require(rgl)){
+#	plotF=0;
+#	message("Plot supressed:  Package rgl required for 3D plot of subpopulation clusters. Load this package befor using this option.")
+#}
 freq=as.numeric(colnames(densities));
 print(paste("Clustering ",nrow(densities),"probability distributions..."))
 cols=c("red","yellow","green","pink","magenta","cyan","lightblue","blue");
@@ -100,10 +100,10 @@ while (nrep>0){
         SPs[k,"score"]=score;
 	 
         ##plot option
-        if (exists("plotF") && plotF>0 && nrep==tRep){
-            col=cols[mod(k,length(cols))+1];
-            count=.addTo3DPlot(count,clusterM,freq,col);
-        }
+        #if (exists("plotF") && plotF>0 && nrep==tRep){
+        #    col=cols[mod(k,length(cols))+1];
+        #    count=.addTo3DPlot(count,clusterM,freq,col);
+        #}
      },error = function(e) {
          print(e);
      })
@@ -123,12 +123,12 @@ if (length(allSPs)==0){
 	return(NULL);
 }
 
-##plot option
-if (plotF>0){
-   title3d("",label);
-}
+###plot option
+#if (plotF>0){
+#   title3d("",label);
+#}
 
-robSPs=.chooseRobustSPs(allSPs,precision);
+robSPs=.chooseRobustSPs(allSPs,precision,min_CellFreq);
 SPs=.collapseSimilar(robSPs$SPs,precision);
 
 outcols=c("Mean Weighted","score","precision","nMutations");##printlay only these columns
@@ -153,12 +153,12 @@ for (pI in 1:nrow(peakCl)){
 return(wMean);
 }
 
-.chooseRobustSPs <- function(allSPs,precision){
+.chooseRobustSPs <- function(allSPs,precision,min_CellFreq){
 ## input parameter SPs is a cell array with DataMatrix (DM) objects. Each row in
 ## DM contains the size and the p-value associated with a SP. DM is sorted
 ## in descending order of SP size.
 #count frequencies among predictions;
-freq=t(seq(0.1,1,by=precision));
+freq=t(seq(min_CellFreq,1,by=precision));
 SPsizes=matrix(nrow = length(allSPs), ncol = length(freq),
           dimnames = list(paste(c(1:length(allSPs))), freq))
 for (i in 1:length(allSPs)){
@@ -201,17 +201,17 @@ return(output);
 }
 
 
-.addTo3DPlot <- function(count,clusterM,freq,color,myPlot){
-X=(count+1):(count+nrow(clusterM))
-updatecount=count+nrow(clusterM);
-addV=TRUE;
-if(count==0){
-  addV=FALSE;
-}
-persp3d(as.numeric(X),as.numeric(freq),clusterM,col=color,aspect=c(1, 1, 0.5), add=addV,
-                  xlab="Mutation", ylab="cell-frequency", zlab="Probability");
-return(updatecount);
-}
+#.addTo3DPlot <- function(count,clusterM,freq,color,myPlot){
+#X=(count+1):(count+nrow(clusterM))
+#updatecount=count+nrow(clusterM);
+#addV=TRUE;
+#if(count==0){
+#  addV=FALSE;
+#}
+#persp3d(as.numeric(X),as.numeric(freq),clusterM,col=color,aspect=c(1, 1, 0.5), add=addV,
+#                  xlab="Mutation", ylab="cell-frequency", zlab="Probability");
+#return(updatecount);
+#}
 
 .collapseSimilar <-function(SPs,precision){
 isNaNIdx=which(is.na(SPs[,"Mean Weighted"]));

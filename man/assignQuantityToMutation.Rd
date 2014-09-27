@@ -7,7 +7,7 @@
 \arguments{
   \item{dm}{
 	Matrix in which each row corrsponds to a mutation. Has to contain at least the following column names: \cr 
-	\bold{chr} - the chrmosome on which each mutation is located;\cr
+	\bold{chr} - the chromosome on which each mutation is located;\cr
 	\bold{startpos} - the genomic position of each mutation.
 }
   \item{cbs}{

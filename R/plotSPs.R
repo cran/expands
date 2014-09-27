@@ -4,7 +4,7 @@ plotSPs<-function(dm,sampleID=NA,cex=0.5){
 #   > the SP to which the mutation has been assigned (squares)
 #   > the ploidy of the locus in that SP 
 #   > the allele frequency of the mutation. 
-#Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars – somatic SNVs, triangles - LOH). 
+#Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars ? somatic SNVs, triangles - LOH). 
 #Subpopulations are colored based on the confidence with which the mutation has been assigned to the corresponding subpopulation (black - highest, white - lowest).
 #DM is a DataMatrix object returned by runExPANdS. Columns must include:
 #     > chr - the chrmosome on which each SNV is located
@@ -56,7 +56,7 @@ for (k in 1:nrow(dm)){
         legend1$text[length(legend1$text)+1]="SP";
         legend1$col[length(legend1$text)]=x[ci];
         par(xpd=TRUE)
-        legend("topright",legend1$text,fill=legend1$col,inset=c(-0.1,-0.02),cex=0.75/cex)
+        legend("topright",legend1$text,fill=legend1$col,inset=c(-0.1,-0.02),cex=0.75/cex,bty = "n")
     }
 }
 .plotSPPerChr(dm,17,1,0,7);

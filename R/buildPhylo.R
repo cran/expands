@@ -49,6 +49,8 @@ buildPhylo<-function(ploidy,outF,treeAlgorithm="bionjs"){
   }
   
   D=D*100;
+  #D=D[-1*which(rownames(D)=="Consensus_SP"),]
+  #D=D[,-1*which(colnames(D)=="Consensus_SP")]
   write.table(D,paste(outF,".dist",sep=""),quote=F,sep="\t");
   print(paste("distance-matrix saved under ",outF,".dist",sep=""));
   tr <- njs(D);

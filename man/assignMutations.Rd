@@ -2,11 +2,11 @@
 \alias{assignMutations}
 \title{Mutation Assignment}
 \description{Assigns mutations to previously predicted subpopulations.}
-\usage{assignMutations(dm, finalSPs, densities, max_PM=6)}
+\usage{assignMutations(dm, finalSPs, densities, max_PM=6, min_CellFreq=0.1)}
 \arguments{
   \item{dm}{
        Matrix in which each row corrsponds to a mutation. Has to contain at least the following columnnames:\cr 
-	\bold{chr} - the chrmosome on which each mutation is located; \cr
+	\bold{chr} - the chromosome on which each mutation is located; \cr
 	\bold{startpos} - the genomic position of each mutation;\cr
 	\bold{AF_Tumor} - the allele-frequency of each mutation;\cr
 	\bold{PN_B} - the ploidy of the B-allele in normal (non-tumor) cells (binary variable: 1 if the mutation is a germline variant, 0 if somatic).
@@ -19,6 +19,9 @@
 }
   \item{max_PM}{
        Upper threshold for the number of amplicons per mutated cell (default: 6). See also \code{\link{cellfrequency_pdf}.}
+}
+  \item{min_CellFreq}{
+        Lower threshold for the prevalence of a mutated cell (default: 0.1); mutations for which allele frequency x copy number are below this value, are excluded from further computation. Decreasing the value of this variable is not recommended unless extensive depth and breadth of coverage underly the measurements of copy numbers and allele frequencies.
 }
 }
 \details{

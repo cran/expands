@@ -118,29 +118,64 @@ The phylogenetic tree \Robject{tr} is obtained by running a neighbor-joining tre
 ##building phylogeny
 tr=buildPhylo(aQ,snvF)
 @
-
-\newpage
-\subsection{Visualization of predicted phylogeny}
 Finally we plot the phyloegentic tree.
 \begin{figure}[htbp]
 \begin{center}
 <<fig=TRUE, width=15, height=8>>=
 plot(tr,cex=2.5)
 @
-\caption{\label{f4.3} 
+\caption{\label{f4.3}
 Phylogram representation of the inferred evolutionary relations between the four predicted SPs. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
 }
 \end{center}
 \end{figure}
 
+\newpage
+\section{Inferring phylogenetic relationships between SPs from multiple geographical tumor samples}
+Next we integrate the subpoulations predicted in multiple, geographically distinct tumor-samples of a patient into one common phylogeny:
+<<>>=
+#Patient and sample labels
+patient='ID_MRD_001';
+samples=c('_primPancreas','_metKidney','_metLung');
+output=patient;
+#The CBS files for each sample:
+cbs=as.list(paste(patient, samples,'.cbs',sep=""));
+#The SP files for each sample (previously calculated via runExPANdS-function):
+sps=as.list(paste(patient, samples,'.sps',sep=""));
+@
+We build a sample group for this patient to calculate the combined phylogeny:
+<<>>=
+sampleGroup=list(cbs=cbs,sps=sps,labels=samples)
+tr=buildMultiSamplePhylo(sampleGroup,output,keepAmbigSeg = TRUE, plotF=0);
+##Tree tip color labels according to sample origin of SPs:
+jet <- colorRampPalette(c("#00007F", "blue", "#007FFF",
+            "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
+colmap = jet( length(sampleGroup$labels) )
+colors <- rep(colmap[1], each = length(tr$tip.label))
+for (i in 1: length(sampleGroup$labels) ) {
+     ii = grep(sampleGroup$labels[[i]], tr$tip.label)
+     colors[ii] = colmap[i]
+}
+@
+\begin{figure}[htbp]
+\begin{center}
+<<fig=TRUE, width=15, height=8>>=
+plot(tr, tip.col = colors, cex = 1.6, type = "u")
+@
+\caption{\label{f4.3}
+         Phylogram representation of the inferred evolutionary relations between SPs from three distinct geographical samples. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
+}
+\end{center}
+\end{figure}
 
+\newpage
 \section{Acknowledgements}
 Special thanks to Dr. Ruchira S. Datta for her valuable contributions to the structure and presentation of this manuscript.
 
  \begin{thebibliography}{1}
 
-  \bibitem{andor} Noemi Andor, Julie Harness, Hans Werner Mewes and Claudia Petritsch. {\em ExPANdS: Expanding Ploidy and Allele Frequency on Nested Subpopulations. 
-  }  Bioinformatics (2013). In Review.
+  \bibitem{andor} Noemi Andor, Julie Harness, Sabine Mueller, Hans Werner Mewes and Claudia Petritsch. {\em ExPANdS: Expanding Ploidy and Allele Frequency on Nested Subpopulations. 
+  }  Bioinformatics (2013).
 
   \bibitem{Cibulskis}  Cibulskis K, Lawrence MS, Carter SL, Sivachenko A, Jaffe D, Sougnez C, Gabriel S, Meyerson M, Lander ES, Getz G. {\em Sensitive detection of somatic point mutations in impure and heterogeneous cancer samples. 
  } Nat Biotech (2013).

@@ -2,7 +2,7 @@
 \alias{roi}
 \docType{data}
 \title{Regions of interest}
-\description{For internal use only. Default regional boundary for mutations included during clustering, comprising ca. 468 MB centered on the human exome. Relevant if number of input mutations exceeds user defined threshold (often applies to whole genome sequencing data). A saved image of this object in sysdata.rda.}
+\description{For internal use only. Default regional boundary for mutations included during clustering, comprising ca. 468 MB centered on the human exome. Relevant if number of input mutations exceeds user defined threshold (often applies to whole genome sequencing data). A saved image of this object is in sysdata.rda.}
 \format{
 	Numeric matrix in which each row corresponds to a genomic segment. \cr
 	Columns: \cr

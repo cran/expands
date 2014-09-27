@@ -1,18 +1,23 @@
-runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, precision=NA, plotF=2,snvF="out.expands",maxN=8000,region=NA){
+runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precision=NA, plotF=2,snvF="out.expands",maxN=8000,region=NA){
 if (!exists("SNV") || !exists("CBS")){
     print("Input-parameters SNV and/or CBS missing. Please add the paths to tabdelimited files containing the SNVs and copy numbers.");
     return();
 }
 if (is.na("maxScore")){
-    maxScore=1;
+    maxScore=100;
+}
+
+if (is.na("min_CellFreq")){
+    min_CellFreq=0;
 }
 
 if (is.na("max_PM")){
-    max_PM=6;
+    print("Parameter max_PM must be set")
+    return();
 }
 
 if (is.na("plotF")){
-    plotF=1;
+    plotF=0;
 }
 
 nullResult=list("finalSPs"=NULL,"dm"=NULL,"densities"=NULL,"ploidy"=NULL);
@@ -47,6 +52,11 @@ if (is.character(CBS) && file.exists(CBS)){
 	return();
 }
 
+if (any(copyNumber[,"CN_Estimate"]<0) || quantile(copyNumber[,"CN_Estimate"],0.9)<1){
+	print("Column <CN_Estimate> in CBS input seems to contain log-ratio entries. Please supply absolute copy number values (e.g. average ~2.0 expected for predominantly diploid genomes).")
+	return();
+}
+
 dm=assignQuantityToMutation(dm,copyNumber,"CN_Estimate");
 ii=which(is.na(dm[,"CN_Estimate"]));
 if (length(ii)>0){
@@ -58,9 +68,14 @@ if (length(ii)>0){
         print(paste(length(ii), " SNV(s) excluded due to homozygous deletions within that region."));
         dm=dm[-ii,];
 }
-ii=which(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]<0.1);
+ii=which(dm[,"CN_Estimate"]>max_PM);
 if (length(ii)>0){
-        print(paste(length(ii), " SNV(s) excluded due to AF*CN below 0.1 (SNV can't be explained by an SP present in 10% or more of the sample)."));
+        print(paste(length(ii), " SNV(s) excluded due to high-level amplifications (>",max_PM, "copies) within that region. Consider increasing value of parameter max_PM to facilitate inclusion of these SNVs, provided high coverage data (> 150 fold) is available"));
+        dm=dm[-ii,];
+}
+ii=which(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]<min_CellFreq);
+if (length(ii)>0){
+        print(paste(length(ii), " SNV(s) excluded due to AF*CN below ", min_CellFreq," (SNV can't be explained by an SP present in ",min_CellFreq*100 ,"% or more of the sample)."));
         dm=dm[-ii,];
 }
 
@@ -111,22 +126,23 @@ if (size(dm,1)>maxN){
       }
     }
   }
+  print(paste('Found ',length(idx_R), ' SNVs within regions of interest',sep=""))
 }else{
   if (!is.na(region)){
     print(paste("Input contains less than ",maxN," SNVs. Parameter <region> ignored."));
   }
 }
 
-cfd=computeCellFrequencyDistributions(dm, max_PM, precision);
+cfd=computeCellFrequencyDistributions(dm, max_PM, precision, min_CellFreq=min_CellFreq);
 toUseIdx=which(apply(is.finite(cfd$densities),1,all) );
 toUseIdx=intersect(toUseIdx,idx_R);
-SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision, plotF-1,label=snvF);
+SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_CellFreq);
 if(is.null(SPs) || size(SPs,1)==0){
   print("No SPs found.")
   result=list("finalSPs"=NULL,"dm"=cfd$dm,"densities"=cfd$densities);
   return(result);
 }
-aM= assignMutations( cfd$dm, SPs,cfd$densities);
+aM= assignMutations( cfd$dm, SPs,cfd$densities,min_CellFreq=min_CellFreq);
 dm=aM$dm; finalSPs=aM$finalSPs;
 if(is.null(dim(finalSPs))){
   finalSPs=finalSPs[finalSPs["score"]<=maxScore];
@@ -155,22 +171,22 @@ if (plotF>0){
     ##dev.copy(jpeg,filename=paste(snvF,".sps.jpg"))
     #dev.off();
 }
-if (plotF>2){
-    if(!require(rgl)){
-	message("Plot supressed: Package rgl required for 3D plot of subpopulation clusters. Load this package before using this option.")
-    }else{
-    ##plot probability distributions
-    cols=c("red","yellow","green","pink","magenta","cyan","lightblue","blue");
-    kk=ceil(nrow(finalSPs)/2); par(mfcol=c(2,kk));
-    for (i in 2:nrow(finalSPs)){
-        idx=which(dm[toUseIdx,"SP"]==finalSPs[i,"Mean Weighted"]);
-        open3d();
-	        persp3d(as.numeric(1:length(idx)),as.numeric(cfd$freq),t(cfd$densities[idx,]),col=cols[mod(i,length(cols))+1],aspect=c(1, 1, 0.5), add=FALSE,xlab="Mutation", ylab="cell-frequency", zlab="Probability");
-	        title3d(paste("SP_", round(finalSPs[i,"Mean Weighted"], digits=2),"\noo",sep=""));
-        	play3d(spin3d(axis=c(0,0,1), rpm=10), duration=5)
-	    }
-    }
-}
+#if (plotF>2){
+#    if(!require(rgl)){
+#	message("Plot supressed: Package rgl required for 3D plot of subpopulation clusters. Load this package before using this option.")
+#    }else{
+#    ##plot probability distributions
+#    cols=c("red","yellow","green","pink","magenta","cyan","lightblue","blue");
+#    kk=ceil(nrow(finalSPs)/2); par(mfcol=c(2,kk));
+#    for (i in 2:nrow(finalSPs)){
+#        idx=which(dm[toUseIdx,"SP"]==finalSPs[i,"Mean Weighted"]);
+#        open3d();
+#	        persp3d(as.numeric(1:length(idx)),as.numeric(cfd$freq),t(cfd$densities[idx,]),col=cols[mod(i,length(cols))+1],aspect=c(1, 1, 0.5), add=FALSE,xlab="Mutation", ylab="cell-frequency", zlab="Probability");
+#	        title3d(paste("SP_", round(finalSPs[i,"Mean Weighted"], digits=2),"\noo",sep=""));
+#        	play3d(spin3d(axis=c(0,0,1), rpm=10), duration=5)
+#	    }
+#    }
+#}
 
 output=paste(dirF, .Platform$file.sep, snvF,".sps",sep="");
 write.table(dm,file = output, quote = FALSE, sep = "\t", row.names=FALSE);
@@ -183,10 +199,10 @@ if(class(aQ)=="try-error" || is.null(ncol(aQ))){
 	print("Error encountered while reconstructing phylogeny")
 }else {
 	output=paste(dirF, .Platform$file.sep, gsub("\\.","_",snvF), sep="");
-	tr=buildPhylo(aQ,output);
+	tr=try(buildPhylo(aQ,output),silent=FALSE);
 }
 
-if (plotF>1 && !is.null(tr)){
+if (plotF>1 && !is.null(tr) && class(tr)!="try-error"){
 	plot(tr);
 }
 
