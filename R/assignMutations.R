@@ -1,78 +1,177 @@
-assignMutations<-function( dm, finalSPs,densities, max_PM=6, min_CellFreq=0.1){
-if(is.null(dim(finalSPs))){
-	precision=finalSPs["precision"];
-	spFreq=finalSPs["Mean Weighted"];
-}else{
-	spFreq=finalSPs[,"Mean Weighted"];
-	precision=finalSPs[1,"precision"];
-}
-freq=t(seq(min_CellFreq,1,by=precision/10));
-##Assign mutations to SPs
-idx=matrix(NA,1,size(finalSPs,1));
-for (i in 1:size(finalSPs,1)){
-    idx[i]=which.min(abs(freq-spFreq[i]));
-}
-    
-addCols=c("%maxP","SP","PM","PM_B");
-for (k in 1:length(addCols)){
+assignMutations<-function( dm, finalSPs, max_PM=6){
+  
+  if (is.null(dim(finalSPs))) {
+    spFreq = finalSPs[ "Mean Weighted"]
+    precision=finalSPs["precision"]
+  }  else {
+    spFreq = finalSPs[, "Mean Weighted"]
+    precision=finalSPs[1,"precision"]
+  }
+  spFreq=sort(spFreq);
+  
+  ##PM_B is the ploidy of the B-allele in SP; PM is the total ploidy in SP_cnv
+  addCols=c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
+  for (k in 1:length(addCols)){
     dm=.addColumn(dm,addCols[k],NA);
-}
-if (!any(colnames(dm)=="f")){
+  }
+  if (!any(colnames(dm)=="f")){
     dm=.addF(dm,  max_PM);
-}
-dm[,"SP"]=NA; ##delete any potentially existing SP info
-
-for(k in 1:nrow(dm)){
-    #     [a,ia]=max(densities(k,idx));
-    #     p_fadj=densities(k,idx(ia));
-    if (is.na(dm[k,"f"]) || dm[k,"f"]<0.05){
-        next;
+  }
+  dm[,"SP"]=NA;  dm[,"SP_cnv"]=NA; ##delete any potentially existing SP info
+  freq=c()
+  for (sp in spFreq){
+     freq=c(freq,seq(sp-precision/2,sp+precision/2,by=precision/20))
+  }
+  
+  success=0;
+  densities=matrix(matrix(NA,nrow(dm),length(freq)),nrow=nrow(dm),ncol=length(freq),dimnames=list(1:nrow(dm),freq));
+  for(k in 1:nrow(dm)){
+    ##Joined fit
+    snvJ=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max_PM),silent=TRUE)
+    ##Separate fit
+    f_CNV=NA; pm=NA;
+    cnv=try(cellfrequency_pdf(NA,dm[k,"CN_Estimate"],NA,freq, max_PM=max_PM, snv_cnv_flag=2),silent=TRUE)
+    snvSbeforeC=NULL;
+    if(class(cnv)!="try-error" && any(!is.na(cnv$p))){
+      if (max(cnv$p, na.rm=T)>0){
+        idx=which.min(abs(spFreq-freq[which.max(cnv$p)]))
+        f_CNV=spFreq[idx];
+        idx=which.min(abs(cnv$fit[,"f"]-f_CNV));
+        pm=cnv$fit[idx,"PM"]; ##pm=(dm[k,"CN_Estimate"]-(1-f_CNV)*2)/f_CNV;  pm=max(0,pm); pm=min(max_PM,pm,na.rm=T);
+        ##Fit under the assumption that SNV happened before CNV
+        snvSbeforeC=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=NA, snv_cnv_flag=4, SP_cnv=f_CNV, PM_cnv=pm),silent=TRUE);
+      }
     }
-    ia=which.min(abs(spFreq-dm[k,"f"]));
-    p_fadj=densities[k,idx[ia]];
+    ##Max_PM is either 2 if SP with SNV is not a descendant of SP with CNV, and is PM of SP with CNV otherwise. Since we don't know which applies we choose the maximum value
+    snvS=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max(c(pm,2),na.rm=T), snv_cnv_flag=1),silent=TRUE)
     
-    pm=(dm[k,"CN_Estimate"]-(1-spFreq[ia])*2)/spFreq[ia];
-    pm=max(1,pm); pm=min(max_PM,pm);
-    pmb=(dm[k,"CN_Estimate"]*dm[k,"AF_Tumor"]-(1-spFreq[ia])*dm[k,"PN_B"])/spFreq[ia];
-    pmb=min(pm,pmb);pmb=max(1,pmb);
-    maxP=max(densities[k,]);
-    xxx=100*p_fadj/maxP;
-    dm[k,c("SP","%maxP")]=c(spFreq[ia],xxx);
-    dm[k,c("PM","PM_B")]=c(round(pm),round(pmb));
-}
-dm[is.na(dm[,"%maxP"]),"%maxP"]=0;
+    maxP_J=0; ##Maximum probability from joined fit
+    maxP_S=0; ##Maximum probability from separate fit
+    maxP_SbeforeC=0; ##Maximum probability from separate fit, under the assumption that CNV happened in descendant of SP with SNV
+    
+    if(class(snvJ)!="try-error" && any(!is.na(snvJ$p))){
+      maxP_J=max(snvJ$p,na.rm=T)
+    }
+    if(class(snvS)!="try-error" && any(!is.na(snvS$p))){
+      maxP_S=max(snvS$p,na.rm=T)
+    }
+    if(!is.null(snvSbeforeC) && class(snvSbeforeC)!="try-error" && any(!is.na(snvSbeforeC$p))){
+      maxP_SbeforeC=max(snvSbeforeC$p,na.rm=T)
+    }
+    
+    ##Skip if no solution found
+    if (maxP_J==0 && maxP_S==0 && maxP_SbeforeC==0){
+      dm[k,"SP"]=NA;
+      next;
+    }
+    
+    joinedFit=FALSE;
+    if (class(snvJ)!="try-error" && (dm[k,"PN_B"]==1 || maxP_J>=max(maxP_S,maxP_SbeforeC,na.rm=T))){ ##SP carrying SNV and SP carrying CNV have same size, i.e. are identical:
+      joinedFit=TRUE; ##LOH has to be associated with copy number variation --> SNV and CNV must be fit together
+      snv=snvJ; 
+      dm[k,"scenario"]=3;
+    }else{ 
+      if(maxP_S>=maxP_SbeforeC){
+        snv=snvS;
+        dm[k,"scenario"]=1;
+      }else{
+        snv=snvSbeforeC;
+        dm[k,"scenario"]=4;
+      }
+    }
+    
+    ##Save end result:
+    idx=which.min(abs(spFreq-freq[which.max(snv$p)]))
+    dm[k,"SP"]=spFreq[idx];  
+    idx=which.min(abs(snv$fit[,"f"]-dm[k,"SP"]));
+    dm[k,c("PM_B","PM")]=snv$fit[idx,c("PM_B","PM")]; ##(dm[k,"CN_Estimate"]*dm[k,"AF_Tumor"]-(1-dm[k,"SP"])*dm[k,"PN_B"])/dm[k,"SP"];  dm[k,"PM_B"]=max(1,dm[k,"PM_B"]);
+    if (!is.na(dm[k,"PM"]) && dm[k,"PM"]<0){
+      dm[k,"PM"]=NA; ##PM can be -1 if obtained with snv_cnv_flag=1; TODO --> get NA directy for jar and remove this. 
+    }
+    dm[k,"%maxP"]=max(snv$p,na.rm=T); #snv$p[which.min(abs(freq-dm[k,"SP"]))];
+    densities[k,]=snv$p;
+    
+    if(joinedFit){
+      dm[k,"SP_cnv"]=dm[k,"SP"];
+      dm[k,"PM_cnv"]=dm[k,"PM"];
+    }else if (!is.na(pm) && pm==2){
+      dm[k,"SP_cnv"]=dm[k,"SP"];
+      dm[k,"PM_cnv"]=pm; dm[k,"PM"]=pm;
+      #dm[k,"PM"]=pm;
+    }else{
+      dm[k,"SP_cnv"]=f_CNV;
+      dm[k,"PM_cnv"]=pm; 
 
-for (j in 1:size(finalSPs,1)){
-	if(is.null(dim(finalSPs))){
-	    idx=which(dm[,"SP"]==finalSPs["Mean Weighted"]);
-	    finalSPs["nMutations"]=length(idx);	  
-	}else{
-	    idx=which(dm[,"SP"]==finalSPs[j,"Mean Weighted"]);
-	    finalSPs[j,"nMutations"]=length(idx);
-	}
-}
-output=list("dm"=dm,"finalSPs"=finalSPs);
-return(output);
+      ##PM of SP does not have to be 2, because SP may also be a descendant of SP_cnv, i.e. the clone that acquired the CNV
+      ##IF SP is larger than SP_cnv, then SP cannot be descandant of SP_cnv and therefor cannot harbor the CNV --> ploidy = 2
+      ##IF SP is smaller than SP_cnv than SP may descend from SP_cnv: 
+      ##-->Reject descendant hypothesis (ploidy of SP = 2) --> if 2 >= PM_B > PM 
+      ##-->Accept descendant hypothesis (ploidy of SP = PM) --> if PM >= PM_B > 2 
+      ##-->Irresolvable otherwise (ploidy of SP cannot be assigned) 
+      if(!is.na(dm[k,"SP"]) && !is.na(dm[k,"SP_cnv"])){
+        if(dm[k,"SP"]>dm[k,"SP_cnv"]){
+          dm[k,"PM"]=2;
+        }else{
+          if(dm[k,"PM_B"]>dm[k,"PM_cnv"] && dm[k,"PM_B"]<=2){
+            dm[k,"PM"]=2;
+          }else if(dm[k,"PM_B"]>2 && dm[k,"PM_B"]<=dm[k,"PM_cnv"]){
+            dm[k,"PM"]=dm[k,"PM_cnv"];
+          }else{
+            dm[k,"PM"]=NA;
+          }
+        }
+      }
+    }
+
+    success=success+1;
+    if (mod(k,20)==0){
+      print(paste("Processed", k, "out of ",nrow(dm),"SNVs --> success: ",
+                  success,"/",k))
+    }
+  }
+  
+  dm[dm[,"%maxP"]==0,"SP"]=NA;
+  
+  ##Remove SPs to which no mutations were assigned
+  toRm=c();
+  for (j in 1:size(finalSPs,1)){
+    if(is.null(dim(finalSPs))){
+      idx=which(dm[,"SP"]==finalSPs["Mean Weighted"]);
+      finalSPs["nMutations"]=length(idx);	  
+    }else{
+      idx=which(dm[,"SP"]==finalSPs[j,"Mean Weighted"]);
+      finalSPs[j,"nMutations"]=length(idx);
+      if(length(idx)==0){
+        toRm=c(toRm,j);
+      }
+    }
+  }
+  if(length(toRm)>0){
+    finalSPs=finalSPs[-1*toRm,];
+  }
+  output=list("dm"=dm,"finalSPs"=finalSPs);
+  return(output);
 }
 
 
 .addF<-function (dm,  max_PM){
-#.jaddClassPath("ExPANydS.jar")
-.jinit(classpath="ExPANdS.jar")
-#javaImport(packages = "core.analysis.ngs.algorithms.*")
-dm=.addColumn(dm,"f",NA);
-
-for (k in 1:nrow(dm)){
-   expands <-try(.jnew("ExPANdS", as.double(dm[k,"AF_Tumor"]),as.double(dm[k,"CN_Estimate"]),
-                  as.integer(dm[k,"PN_B"]),as.integer(max_PM)));
+  #.jaddClassPath("ExPANydS.jar")
+  .jinit(classpath="ExPANdS.jar")
+  #javaImport(packages = "core.analysis.ngs.algorithms.*")
+  dm=.addColumn(dm,"f",NA);
+  snv_cnv_flag=3; ##co-occurrence assumption of SNV and CNV
+  
+  for (k in 1:nrow(dm)){
+    expands <-try(.jnew("ExPANdS", as.double(dm[k,"AF_Tumor"]),as.double(dm[k,"CN_Estimate"]),
+                        as.integer(dm[k,"PN_B"]),as.integer(max_PM)));
     if (class(expands)=="try-error"){
-	print(expands);
-	print(paste("At SNV ",k,": -->"));
-	print(dm[k,]);
+      print(expands);
+      print(paste("At SNV ",k,": -->"));
+      print(dm[k,]);
     }else{
-	.jcall(expands,,"run")
-    	dm[k,"f"]<-.jcall(expands,"D","getF");
+      .jcall(expands,,"run",as.integer(snv_cnv_flag))
+      dm[k,"f"]<-.jcall(expands,"D","getF");
     }
-}
-return(dm);
+  }
+  return(dm);
 }

@@ -12,7 +12,7 @@
 
 }
 
-\source{Data derived from human SureSelectExome_hg19 50MB library kit annotation}
+\source{Data derived from human SureSelectExome_hg19 50MB library kit annotation.}
 
 
 \seealso{

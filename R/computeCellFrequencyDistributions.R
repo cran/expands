@@ -5,7 +5,7 @@ print("Computing cell-frequency probability distributions...")
 dm=.addColumn(dm,"f",NA);
 
 ##compute cell-freq-probability for each mutation
-freq=t(seq(min_CellFreq,1.1,by=precision/10));
+freq=t(seq(min_CellFreq,1,by=precision/10));
 densities=matrix(matrix(NA,nrow(dm),length(freq)),nrow=nrow(dm),ncol=length(freq),dimnames=list(1:nrow(dm),freq));
 success=0; 
 errors=c();

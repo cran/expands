@@ -24,15 +24,18 @@
 
 \maketitle
 \tableofcontents
+
+
 \section{Introduction}
-Expanding Ploidy and Allele Frequency on Nested Subpopulations (ExPANdS) characterizes genetically diverse subpopulations in a tumor using copy number and allele frequencies derived from exome- or whole genome sequencing input data \cite{andor}.
-Given a set of somatic point mutations,  detected in a tumor sample and the copy number of the mutated loci, ExPANdS identifies the number N of clonal expansions within the tumor, the relative size of the resulting subpopulations in the tumor bulk and the mutations habitant in each subpopulation. Sequencing errors, mapping errors and germline mutations have to be filtered first. The remaining set of somatic mutations can be extended to contain loss of heterozygosity (LOH), that is loci with heterozygous germline polymorphisms where the mutated allele is overrepresented in the cancer cell. For tumor types with a low number of somatic point mutations, this approach can provide a sufficient number of somatic events for the subsequent procedure \cite{andor}. 
+This document contains examples to help a user understand the ExPANdS model. Users who are familiar with the model or who would like to try a quick test-run first should use function \Rfunction{runExPANdS} instead, which bundles the functionalities demonstrated here.
+Expanding Ploidy and Allele Frequency on Nested Subpopulations (ExPANdS) characterizes genetically diverse subpopulations (SPs) in a tumor using copy number and allele frequencies derived from exome- or whole genome sequencing input data \cite{andor}.
+Given a set of somatic point mutations,  detected in a tumor sample and the copy number of the mutated loci, ExPANdS identifies the number of clonal expansions within the tumor, the relative size of the resulting subpopulations in the tumor bulk and the genetic landscape unique to each subpopulation. Sequencing errors, mapping errors and germline mutations have to be filtered first. The remaining set of somatic point mutations can be extended to contain loss of heterozygosity (LOH), that is loci with heterozygous germline polymorphisms where the mutated allele is overrepresented in the cancer cell. For tumor types with a low number of somatic point mutations, this approach can provide a sufficient number of somatic events for the subsequent procedure \cite{andor}. 
 The model predicts subpopulations based on two assumptions:
 \begin{itemize}
-\item Two independent driver-events of the same type will not target the same genomic position in two different cells. Therefore, no more than two distinct cell types exist with respect to a specific locus. 
+\item Two independent driver-events of the same type will not happen at the exact same genomic position in two different cells. Therefore, no more than two distinct cell types exist with respect to a specific locus. 
 \item  Multiple passenger mutations accumulate in a cell before a driver mutation causes a clonal expansion. Thus, each clonal expansion is marked by multiple mutations. 
 \end{itemize}
-These two assumptions are translated into the ExPANdS model in four main steps: cell frequency estimation, clustering, filtering and assignment of mutations to clusters. The following example demonstrates each of these steps separately. All steps are merged in the main function \Rfunction{runExPANdS} provided with the package \Rpackage{expands}.
+These two assumptions are translated into the ExPANdS model in five main steps: cell frequency estimation, clustering, filtering,assignment of mutations to clusters and phylogenetic tree estimation. The following example demonstrates each of these steps separately. The main function \Rfunction{runExPANdS} performs all five steps.
 The robustness of the subpopulation predictions by ExPANdS increases with the number of mutations provided. It is recommended that at least 200 mutations are used as an input to obtain stable results.
 
 \section{Data}
@@ -41,11 +44,11 @@ We illustrate the utility of ExPANdS on data derived from exome sequencing of a 
 library(expands)
 ##loading mutations
 data(snv);
-## use only a subset of all mutations (for performance reasons).
+## using only a subset of all mutations (to reduce time required to run this example)
 set.seed(6); idx=sample(1:nrow(snv), 130, replace=FALSE); snv=snv[idx,];
 ##loading copy number segments
 data(cbs);
-##assign copy number to mutations
+##assigning copy numbers to point mutations
 dm=assignQuantityToMutation(snv,cbs,"CN_Estimate");
 @
 Note that we limit the number of mutations used to 130 to accelerate the computation. In practice however, the inclusion of all available mutations is recommended, as the robustness and accuracy of the algorithm depends on the completeness of the input.
@@ -53,7 +56,7 @@ Note that we limit the number of mutations used to 130 to accelerate the computa
 Next we set the parameters for the subsequent prediction. Type \Rfunction{help(runExPANdS)} for more information on these parameters.
 <<>>=
 ##parameters
-max_PM=6; maxScore=2.5; precision=0.018;
+max_PM=6; maxScore=1.25; precision=0.018;
 plotF=1; 
 ##the name of the sample
 snvF="TCGA-06-0152-01";
@@ -76,20 +79,20 @@ In this case the cell-frequency probability distributions could be estimated for
 Next we find overrepresented cell frequencies using a two-step clustering procedure. Based on the assumption that passenger mutations occur within a cell prior to the driver event that initiates the expansion, each clonal expansion should be marked by multiple mutations. 
 Thus SNVs and CNVs that took place in a cell prior to a clonal expansion should be present in a similar fraction of cells and leave a similar trace in the subsequent clonal expansion. The aim is to find common peaks in the distribution of $P_l(f)$ for multiple mutated loci {\it l}. In the first step, mutations with similar $P_l(f)$ are grouped together by hierarchical cluster analysis of the probability distributions $P_l(f)$ using the Kullback-Leibler divergence as a distance measure. This step may take several minutes to complete, depending on the number of mutations provided. In the second step, each cluster is extended by members with similar distributions in an interval around the cluster-maxima (core-region). Clusters are pruned based on statistics within and outside the core region \cite{andor}. All these steps are performed within the function \Rfunction{clusterCellFrequencies}:
 <<>>=
-SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision, label=snvF)
+SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision)
+SPs=SPs[SPs[,"score"]<=maxScore,]; ## exclude SPs detected at high noise levels
 @
 At this point we already know that five subpopulations have been predicted to coexist in this tumor:
 <<>>=
 print(SPs)
 @
 \subsection{Assignment of SNVs to clusters}
-Now, all that remains to be done is to assign each mutated locus to one of the predicted subpopulations. A mutated locus {\it l} is assigned to the subpopulation {\it C}, whose size is closest to the maximum likelyhood cellular frequency of {\it l}:
- $C:=argmin_C |argmax_f P_l(f)-f^C|$, where $P_l(f)$ is the probability distribution of cellular frequencies as computed by \Rfunction{cellfrequency\_pdf} and $f^C$ is the size of subpopulation {\it C}. The mutated loci assigned to each subpopulation cluster represent the genetic profile of each predicted subpopulation.
+Now, all that remains to be done is to assign each point mutation to one of the predicted subpopulations. A point mutation is assigned to the subpopulation {\it C}, whose size is closest to the maximum likelyhood cellular frequency of the point mutation. Cell frequency probability distributions are calculated for three alternative evolutionary scenarios (for more information see details of function \Rfunction{assignMutations}). The mutated loci assigned to each subpopulation cluster represent the genetic profile of each predicted subpopulation.
 <<>>=
 ##assign mutations to subpopulations
-aM= assignMutations( dm, SPs,cfd$densities)
+aM= assignMutations( dm, SPs)
 @
-\Robject{aM\$dm} contains the input matrix \Robject{snv} with two additional columns: \Robject{subpopulation} - the size of the subpopulation to which the mutation has been assigned; and \Robject{\%maxP} - confidence of the assignment.
+\Robject{aM\$dm} contains the input matrix \Robject{snv} with seven additional columns, including: \Robject{SP} - the size of the subpopulation to which the mutation has been assigned; and \Robject{\%maxP} - confidence of the assignment. See \Rfunction{help(assignMutations)} for more information on the output values of this function.
 @
 
 \newpage
@@ -101,37 +104,37 @@ Now we plot the coexistent subpopulations predicted in the previous steps.
 plotSPs(aM$dm, snvF,cex=1)
 @
 \caption{\label{f4.3} 
-Coexistent subpopulations determined by ExPANdS in an Glioblastoma genome. Five subpopulations were identified based on the allele-frequency and copy number of 130 mutations detected within the cancer-genome. Subpopulations were present in 96\%, 71\%, 38\%, 28\% and 15\% of the sample (y-axis). For each of the 130 exonic mutations (x-axis) we show: - the subpopulation to which the mutation has been assigned (squares), - the ploidy of the locus in that subpopulation and - the allele frequency of the mutation. Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars - somatic SNVs, triangles - LOH). Subpopulations are colored based on the confidence with which the mutation has been assigned to the subpopulation (black - highest, white - lowest).
+Coexistent subpopulations determined by ExPANdS in an Glioblastoma genome. Five subpopulations were identified based on the allele-frequency and copy number of 130 mutations detected within the cancer-genome. Subpopulations were present in 98\%, 77\%, 46\%, 28\% and 12\% of the sample (y-axis). For each of the 130 exonic mutations (x-axis) we show: - the subpopulation to which the mutation has been assigned (squares), - the ploidy of the locus in that subpopulation and - the allele frequency of the mutation. Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars - somatic SNVs, triangles - LOH). Subpopulations are colored based on the confidence with which the mutation has been assigned to the subpopulation (black - highest, white - lowest).
 }
 \end{center}
 \end{figure}
 
 \newpage
-\section{Inferring phylogenetic relationships between SPs}
-We model the tumor's phylogeny based on pairwise similarities between SPs. Pairwise phylogenetic distances between SPs are calculated from SP specific ploidy profiles. First we have to assign SP specific ploidies for the input genome segments obtained by CBS:
+\subsection{Inferring phylogenetic relations between subpopulations}
+We model the tumor's phylogeny based on pairwise similarities between SPs. Pairwise phylogenetic distances between SPs are calculated from SP specific ploidy profiles. First we have to assign SP specific ploidies for the input genome segments obtained by circular binary segmentation:
 <<>>=
 ##assigning copy number to subpopulations
 aQ=assignQuantityToSP(cbs, aM$dm)
 @
-The phylogenetic tree \Robject{tr} is obtained by running a neighbor-joining tree estimation algorithm on pairwise phylogenetic distances between SPs: 
+The subpopulation phylogeny is obtained by running a neighbor-joining tree estimation algorithm on pairwise phylogenetic distances between SPs: 
 <<>>=
 ##building phylogeny
-tr=buildPhylo(aQ,snvF)
+spPhylo=buildPhylo(aQ,snvF)
 @
 Finally we plot the phyloegentic tree.
 \begin{figure}[htbp]
 \begin{center}
 <<fig=TRUE, width=15, height=8>>=
-plot(tr,cex=2.5)
+plot(spPhylo$tree,cex=2.5)
 @
 \caption{\label{f4.3}
-Phylogram representation of the inferred evolutionary relations between the four predicted SPs. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
+Phylogram representation of the inferred relations between the five predicted SPs. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
 }
 \end{center}
 \end{figure}
 
 \newpage
-\section{Inferring phylogenetic relationships between SPs from multiple geographical tumor samples}
+\section{Inferring phylogenetic relations between subpopulations from multiple geographical tumor samples}
 Next we integrate the subpoulations predicted in multiple, geographically distinct tumor-samples of a patient into one common phylogeny:
 <<>>=
 #Patient and sample labels
@@ -146,7 +149,7 @@ sps=as.list(paste(patient, samples,'.sps',sep=""));
 We build a sample group for this patient to calculate the combined phylogeny:
 <<>>=
 sampleGroup=list(cbs=cbs,sps=sps,labels=samples)
-tr=buildMultiSamplePhylo(sampleGroup,output,keepAmbigSeg = TRUE, plotF=0);
+tr=buildMultiSamplePhylo(sampleGroup,output,ambigSg = F, plotF=0);
 ##Tree tip color labels according to sample origin of SPs:
 jet <- colorRampPalette(c("#00007F", "blue", "#007FFF",
             "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
@@ -157,13 +160,14 @@ for (i in 1: length(sampleGroup$labels) ) {
      colors[ii] = colmap[i]
 }
 @
+Finally plot the inter-sample phylogeny:
 \begin{figure}[htbp]
 \begin{center}
 <<fig=TRUE, width=15, height=8>>=
 plot(tr, tip.col = colors, cex = 1.6, type = "u")
 @
 \caption{\label{f4.3}
-         Phylogram representation of the inferred evolutionary relations between SPs from three distinct geographical samples. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
+         Phylogram representation of the inferred relations between SPs from three distinct geographical samples. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
 }
 \end{center}
 \end{figure}
@@ -180,6 +184,6 @@ Special thanks to Dr. Ruchira S. Datta for her valuable contributions to the str
   \bibitem{Cibulskis}  Cibulskis K, Lawrence MS, Carter SL, Sivachenko A, Jaffe D, Sougnez C, Gabriel S, Meyerson M, Lander ES, Getz G. {\em Sensitive detection of somatic point mutations in impure and heterogeneous cancer samples. 
  } Nat Biotech (2013).
 
- \end{thebibliography}
+\end{thebibliography}
 
 \end{document}

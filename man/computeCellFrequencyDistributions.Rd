@@ -15,18 +15,17 @@
         Upper threshold for the number of amplicons per mutated cell (default: 6). See also \code{\link{cellfrequency_pdf}.} 
 }
   \item{precision}{
-	Precision with which subpopulation size is predicted, a small value reflects a high resolution and can trigger a higher number of predicted subpopulations (recommended: \code{0.1/log(n/7),} where \code{n}=# mutations).
+	Precision with which subpopulation size is predicted, a small value reflects a high resolution and can lead to a higher number of predicted subpopulations.
 }
   \item{min_CellFreq}{
-        Lower threshold for the prevalence of a mutated cell (default: 0.1); mutations for which allele frequency x copy number are below this value, are excluded from further computation. Decreasing the value of this variable is not recommended unless extensive depth and breadth of coverage underly the measurements of copy numbers and allele frequencies.
-}
+        Lower boundary for the prevalence of a mutated cell (default: 0.1).}
 }
 
 \value{List with three fields:
 	\item{freq}{The cellular frequencies for which probabilities are computed.}
-	\item{densities}{Matrix in which each row corresponds to a mutation and each column corresponds to a cellular frequency. Each value \eqn{densities[i,j]} represents the probability that mutation \eqn{i} is present in a fraction \eqn{f} of cells, where \eqn{f} is \eqn{freq[j].}
+	\item{densities}{Matrix in which each row corresponds to a point mutation and each column corresponds to a cellular frequency. Each value \eqn{densities[i,j]} represents the probability that mutation \eqn{i} is present in a fraction \eqn{freq[j]} of cells.
 }
-	\item{dm}{The input matrix with column \eqn{f} updated according to the cellular frequency that best explains the observed allele frequency and ploidities \eqn{(PM, PN, PN_B)}.}
+	\item{dm}{The input matrix with column \eqn{f} updated according to the cellular frequency that best explains the observed allele frequency and copy number.}
 }
 
 \author{Noemi Andor}
