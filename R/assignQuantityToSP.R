@@ -6,33 +6,33 @@ assignQuantityToSP<-function (cbs, dm, colName = "PM_cnv", keepAmbigSeg = FALSE)
   x = colnames(cbs)
   x[(length(x) + 1):(length(x) + length(SPs))] = paste("SP_", 
                                                        as.character(spSize), sep = "")
-  out = matrix(cbind(cbs, matrix(NaN, nrow(cbs), length(SPs))), 
+  ploidy = matrix(cbind(cbs, matrix(NaN, nrow(cbs), length(SPs))), 
                nrow = nrow(cbs), ncol = length(x), dimnames = list(1:nrow(cbs), 
                                                                    x))
   toD = c()
   allAssigned=c();
-  for (k in 1:nrow(out)) {
+  for (k in 1:nrow(ploidy)) {
     if (mod(k, 100) == 0) {
       print(paste("Finding overlaps for CBS segment", k, 
-                  "out of ", nrow(out), "..."))
+                  "out of ", nrow(ploidy), "..."))
     }
-    idx = which(dm[, "chr"] == out[k, "chr"] & dm[, "startpos"] >= 
-                  out[k, "startpos"] & dm[, "startpos"] <= out[k, "endpos"])
+    idx = which(dm[, "chr"] == ploidy[k, "chr"] & dm[, "startpos"] >= 
+                  ploidy[k, "startpos"] & dm[, "startpos"] <= ploidy[k, "endpos"])
     if (length(idx) == 0) {
       next
     }
     for (j in 1:length(idx)) {
       dmx = dm[idx[j], ]
       ##First assign SP with abberant copy number
-      if (is.na(dmx["SP_cnv"])) {
+      if (is.na(dmx["SP_cnv"]) || is.na(dmx[colName])) {
         next
       }
       sp = paste("SP_", as.character(round(dmx["SP_cnv"] * 
                                              1000)/1000), sep = "")
-      thisAssigned=c(k,dmx["SP_cnv"] ,out[k,"chr"],out[k,"startpos"],out[k,"endpos"],dmx[colName]);
+      thisAssigned=c(k,dmx["SP_cnv"] ,ploidy[k,"chr"],ploidy[k,"startpos"],ploidy[k,"endpos"],dmx[colName]);
       allAssigned = rbind(allAssigned, thisAssigned)
-      if (is.na(out[k, sp]) || out[k, sp] == as.double(dmx[colName])) {
-        out[k, sp] = as.double(dmx[colName])
+      if (is.na(ploidy[k, sp]) || ploidy[k, sp] == as.double(dmx[colName])) {
+        ploidy[k, sp] = as.double(dmx[colName])
       } else {
         toD = rbind(toD, thisAssigned)
       }
@@ -46,10 +46,10 @@ assignQuantityToSP<-function (cbs, dm, colName = "PM_cnv", keepAmbigSeg = FALSE)
       }
       sp = paste("SP_", as.character(round(dmx["SP"] *
                                              1000)/1000), sep = "")
-      thisAssigned=c(k,dmx["SP"] ,out[k,"chr"],out[k,"startpos"],out[k,"endpos"],dmx["PM"]);
+      thisAssigned=c(k,dmx["SP"] ,ploidy[k,"chr"],ploidy[k,"startpos"],ploidy[k,"endpos"],dmx["PM"]);
       allAssigned = rbind(allAssigned, thisAssigned)
-      if (is.na(out[k, sp]) || out[k, sp] == dmx["PM"]) {
-        out[k, sp] = as.double(dmx["PM"])
+      if (is.na(ploidy[k, sp]) || ploidy[k, sp] == dmx["PM"]) {
+        ploidy[k, sp] = as.double(dmx["PM"])
       } else {
         toD = rbind(toD, thisAssigned)
       }
@@ -72,15 +72,15 @@ assignQuantityToSP<-function (cbs, dm, colName = "PM_cnv", keepAmbigSeg = FALSE)
       sp = paste("SP_", as.character(round(as.numeric(uD[i,"SP"] )* 1000)/1000), sep = "")
       tmpI=as.numeric(uD[i,"Idx"]);
       if (!keepAmbigSeg){
-        out[tmpI,sp]=NA;
+        ploidy[tmpI,sp]=NA;
         printErr=TRUE;    
       }else{
-        out[tmpI,sp]=round(median(as.numeric(allAssigned[ii,colName])));
+        ploidy[tmpI,sp]=round(median(as.numeric(allAssigned[ii,colName])));
       }
     }
   }else if (is.null(nrow(toD)) && length(toD) > 0) {
     if (!keepAmbigSeg){
-      out[as.numeric(toD[1]),]=NA;
+      ploidy[as.numeric(toD[1]),]=NA;
       printErr=TRUE;    
     }
   }
@@ -90,10 +90,36 @@ assignQuantityToSP<-function (cbs, dm, colName = "PM_cnv", keepAmbigSeg = FALSE)
     print("Ploidies not assigned for these segments in corresponding SPs.")
   } 
   
+
+  
+  dm1=try(.assignPloidyToSPwithSNV(dm,ploidy),silent=FALSE)
+  if(class(dm1)!="try-error"){
+    dm=dm1;
+  }
+  out=list("dm"=dm, "ploidy"=ploidy);
+  
   print("... Done.")
   if (keepAmbigSeg){
     print("Warning: parameter <keepAmbigSeg> set to TRUE. Output includes segment-assignements where subpopulation specific ploidy is ambiguous.Recommend repeating circular binary segmentation with less stringent parameters instead, to reduce segment length and thus the prevalence of ambiguous assignements.")
   }
   
   return(out)
+}
+
+.assignPloidyToSPwithSNV <-function(dm,ploidy){
+  ##PM may either be 2 or may be equal to the copy number of SP_cnv, if and only if this SP is a descendant of SP_cnv
+  ii=which(!is.na(dm[,"SP"]) & (is.na(dm[,"SP_cnv"]) | dm[,"SP"]!=dm[,"SP_cnv"])); ## PM_cnv refers to ploidy of SP_cnv, not to ploidy of SP. Latter may be 2
+  spIdx=grep("SP",colnames(ploidy))
+  if (!isempty(ii)){
+    for (k in ii){
+      idx = which(ploidy[, "chr"] == dm[k, "chr"] & ploidy[, "startpos"] <= 
+                    dm[k, "startpos"] & ploidy[, "endpos"] >= dm[k, "startpos"])
+      if(!isempty(idx)){
+        sp = paste("SP_", as.character(round(as.numeric(dm[k,"SP"] )* 1000)/1000), sep = "")
+        idx=idx[which.min(ploidy[idx,"endpos"]-ploidy[idx,"startpos"])];##Smallest overlapping segment
+        dm[k,"PM"]=max(dm[k,"PM_B"],ploidy[idx,sp]);
+      }
+    }
+  }
+  return(dm);
 }

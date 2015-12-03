@@ -29,9 +29,9 @@
 }
 }
 
-\value{
-\item{cbs}{
-       The input matrix with one additional column for each predicted subpopulation:\cr
+\value{List with two fields:
+        \item{dm}{The input mutation matrix with missing values in column PM imputed from information in copy number matrix when possible.}
+	\item{ploidy}{The input copy number matrix with one additional column for each predicted subpopulation:\cr
 	\bold{SP_xx} - where xx is the size of the corresponding subpopulation (SP). Column entries contain the ploidy of each segment in SP; Value <NA> indicates that no ploidy could be inferred for the segment in this subpopulation (either because SP had no point mutations/CNVs within the segment, or because SP had multiple, ambiguous ploidy assignments within the segment).
 }
 }

@@ -1,10 +1,11 @@
 buildPhylo<-function(ploidy,outF,treeAlgorithm="bionjs",dm=NA){
   #library(ape)
+  out=list("tree"=NULL,"dm"=dm);
   ii=grep("SP",colnames(ploidy));
   cnv=ploidy[,ii];
   if(is.null(ncol(cnv))){
     print("Less than two SPs coexist in this tumor. Aborting phylogeny reconstruction");
-    return(NULL);
+    return(out);
   }
   
   print(paste("Building phylogeny using ",treeAlgorithm," algorithm",sep=""))
@@ -38,14 +39,15 @@ buildPhylo<-function(ploidy,outF,treeAlgorithm="bionjs",dm=NA){
     }
   }
   #remove NAs
-  if (nrow(D)-length(toRm)<2){
-    print("No two SPs found between which distance could be calculated. Aborting phylogeny reconstruction");
-    return(NULL);
-  }
   if (length(toRm)>0){
     print(paste("Insufficient copy number segments for ",rownames(D)[toRm],". SP excluded from phylogeny",sep=""))
     D=D[-toRm,];
     D=D[,-toRm];
+  }
+  
+  if(is.null(nrow(D)) || nrow(D)-length(grep("Consensus",rownames(D)))<2){
+    print("No two SPs found between which distance could be calculated. Aborting phylogeny reconstruction");
+    return(out);
   }
   
   D=D*100;
@@ -53,9 +55,11 @@ buildPhylo<-function(ploidy,outF,treeAlgorithm="bionjs",dm=NA){
   #D=D[,-1*which(colnames(D)=="Consensus_SP")]
   write.table(D,paste(outF,".dist",sep=""),quote=F,sep="\t");
   print(paste("distance-matrix saved under ",outF,".dist",sep=""));
-  tr <- njs(D);
+  tr =c();
   if (treeAlgorithm=="bionjs"){
     tr <- bionjs(D);
+  }else{
+    tr <- njs(D);
   }
   tr$root.edge <- 0; ## adds root dummy
   
@@ -63,12 +67,8 @@ buildPhylo<-function(ploidy,outF,treeAlgorithm="bionjs",dm=NA){
   write.tree(tr, file = outF);
   print(paste("tree saved under ",outF,sep=""));
   
-  out=list("tree"=tr,"dm"=NA)
+  out$tree=tr;
   if(!is.na(dm)){
-    dm1=try(.assignPloidyToSPwithSNV(dm,ploidy),silent=FALSE)
-    if(class(dm1)!="try-error"){
-      dm=dm1;
-    }
     dm1=try(.assignSNVsToMultipleSPs(dm,outF),silent=FALSE)
     if(class(dm1)!="try-error"){
       dm=dm1;
@@ -76,24 +76,6 @@ buildPhylo<-function(ploidy,outF,treeAlgorithm="bionjs",dm=NA){
     out$dm=dm;
   }
   return(out);
-}
-
-.assignPloidyToSPwithSNV <-function(dm,ploidy){
-  ##PM may either be 2 or may be equal to the copy number of SP_cnv, if and only if this SP is a descendant of SP_cnv
-  ii=which(!is.na(dm[,"SP"]) & (is.na(dm[,"SP_cnv"]) | dm[,"SP"]!=dm[,"SP_cnv"])); ## PM_cnv refers to ploidy of SP_cnv, not to ploidy of SP. Latter may be 2
-  spIdx=grep("SP",colnames(ploidy))
-  if (!isempty(ii)){
-    for (k in ii){
-      idx = which(ploidy[, "chr"] == dm[k, "chr"] & ploidy[, "startpos"] <= 
-                    dm[k, "startpos"] & ploidy[, "endpos"] >= dm[k, "startpos"])
-      if(!isempty(idx)){
-        sp = paste("SP_", as.character(round(as.numeric(dm[k,"SP"] )* 1000)/1000), sep = "")
-        idx=idx[which.min(ploidy[idx,"endpos"]-ploidy[idx,"startpos"])];##Smallest overlapping segment
-        dm[k,"PM"]=max(dm[k,"PM_B"],ploidy[idx,sp]);
-      }
-    }
-  }
-  return(dm);
 }
 
 .assignSNVsToMultipleSPs <-function(dm,outF){

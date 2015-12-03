@@ -119,7 +119,7 @@ aQ=assignQuantityToSP(cbs, aM$dm)
 The subpopulation phylogeny is obtained by running a neighbor-joining tree estimation algorithm on pairwise phylogenetic distances between SPs: 
 <<>>=
 ##building phylogeny
-spPhylo=buildPhylo(aQ,snvF)
+spPhylo=buildPhylo(aQ$ploidy,snvF)
 @
 Finally we plot the phyloegentic tree.
 \begin{figure}[htbp]

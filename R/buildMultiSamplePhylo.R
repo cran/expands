@@ -16,6 +16,10 @@ buildMultiSamplePhylo<-function (samGr,out,treeAlgorithm="bionjs", ambigSg=F,plo
                                                          "endpos")]/10000) * 10000
     dmPri = read.table(samGr$sps[[i]], sep = "\t", 
                        header = T, stringsAsFactors = FALSE)
+    tmpI=grep("SP_0", colnames(dmPri));
+    if (!isempty(tmpI)){
+        dmPri=dmPri[,-1*tmpI]; ##remove SP composition specific columns
+    }
     if(!is.na(spRes) && !spRes){
       dmPri[,"SP"]=max(dmPri[,"SP"],na.rm=T);
       if(any("SP_cnv" %in% colnames(dmPri))){ ##Backward compatibility
@@ -57,9 +61,11 @@ buildMultiSamplePhylo<-function (samGr,out,treeAlgorithm="bionjs", ambigSg=F,plo
     print(paste("Processing sample ", i, " out of ",n_Samples,sep=""));
     aQpriCBS = try(assignQuantityToSP(allCBS[, cols], dmPri,  colName = "PM",
                                       keepAmbigSeg = ambigSg), silent = FALSE)
+    aQpriCBS=aQpriCBS$ploidy;
     dmPri[, "PM_B"] = sign(dmPri[, "PM_B"])
     aQpriDM = try(assignQuantityToSP(allDM[, cols], dmPri, 
                                      colName = "PM_B"), silent = FALSE)
+    aQpriDM=aQpriDM$ploidy;
     firstI = min(grep("SP", colnames(aQpriCBS)))
     aqCBS = cbind(aqCBS, aQpriCBS[, firstI:ncol(aQpriCBS)])
     aqDM = cbind(aqDM, aQpriDM[, firstI:ncol(aQpriDM)])

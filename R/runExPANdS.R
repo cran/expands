@@ -73,6 +73,9 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
       print("Column <CN_Estimate> in CBS input seems to contain log-ratio entries. Please supply absolute copy number values (e.g. average ~2.0 expected for predominantly diploid genomes).")
       return();
     }
+    if (sum(abs(copyNumber[,"CN_Estimate"]-round(copyNumber[,"CN_Estimate"])))<1){
+      print("Warning! Copy numbers have values rounded to the closest integer. Using rational positive estimates of copy numbers is recommended.")
+    }
     dm=assignQuantityToMutation(dm,copyNumber,"CN_Estimate");
   }else{
     print("Using column <CN_Estimate> from <SNV> as copy number estimate. Parameter <CBS> used only for phylogeny inference.")
@@ -208,12 +211,14 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
   ##phylogeny
   aQ=try(assignQuantityToSP(copyNumber, dm),silent=FALSE);
   tr=NULL;
-  if(class(aQ)=="try-error" || is.null(ncol(aQ))){
+  if(class(aQ)=="try-error" || is.null(ncol(aQ$ploidy))){
     print("Error encountered while reconstructing phylogeny")
   }else {
-    output=paste(dirF, .Platform$file.sep, gsub("\\.","_",snvF), sep="");
+    dm=aQ$dm;
+    aQ=aQ$ploidy;
+    output=paste(dirF, .Platform$file.sep, snvF, sep="");    # output=paste(dirF, .Platform$file.sep, gsub("\\.","_",snvF), sep="");
     tr=try(buildPhylo(aQ,output,dm=dm),silent=FALSE);
-    if(!is.null(tr) && class(tr)!="try-error" ){
+    if(class(tr)!="try-error" ){
       if(class(tr$dm)!="try-error" && !is.na(tr$dm)){
         dm=tr$dm;
       }

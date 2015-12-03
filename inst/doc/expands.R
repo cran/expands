@@ -75,7 +75,7 @@ aQ=assignQuantityToSP(cbs, aM$dm)
 ### code chunk number 10: expands.Rnw:120-122
 ###################################################
 ##building phylogeny
-spPhylo=buildPhylo(aQ,snvF)
+spPhylo=buildPhylo(aQ$ploidy,snvF)
 
 
 ###################################################
