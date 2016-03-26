@@ -22,7 +22,7 @@ if (!any(colnames(cbs)=="segmentLength")){
 
 if (quantityColumnLabel[1]=="FPKM"){
     dm=.assignFPKMToMutation(dm,cbs,cols);
-}else if(quantityColumnLabel[1]=="CN_Estimate"){
+}else if(quantityColumnLabel[1]=="CN_Estimate" || !isempty(grep("^SP_",quantityColumnLabel[1])) ){
     dm=.assignCBSToMutation(dm,cbs,cols);
 }else{
     stop(paste("Invalid quantityColumnLabel: ",quantityColumnLabel,". Valid options are: FPKM, CN_Estimate."));
@@ -45,11 +45,11 @@ for (k in 1:nrow(dm)){
         dm[k,"Dominant_Isoform"]=dm[k,"Dominant_Isoform"]+1;
         idx=idx[-1]
     }
-    if (length(idx)>0){
-        dm2=repmat(dm[k,],length(idx),1);
-        dm2[,cols]=cbs[idx,cols];
-        dmPlus=rbind(dmPlus,dm2);
-    }
+#    if (length(idx)>0){
+#        dm2=repmat(dm[k,],length(idx),1);
+#        dm2[,cols]=cbs[idx,cols];
+#        dmPlus=rbind(dmPlus,dm2);
+#    }
 }
 dm=rbind(dm,dmPlus);
 dm=dm[,colnames(dm)!="segmentLength"];

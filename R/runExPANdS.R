@@ -1,4 +1,4 @@
-runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precision=NA, plotF=2,snvF=NULL,maxN=8000,region=NA){
+runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precision=NA, plotF=2,snvF=NULL,maxN=8000,region=NA, peakselection='localsum'){
   if (!exists("SNV") || !exists("CBS")){
     print("Input-parameters SNV and/or CBS missing. Please add the paths to tabdelimited files containing the SNVs and copy numbers.");
     return();
@@ -29,7 +29,7 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
     if (!all(sapply(dm,is.numeric))){
       print(paste("Warning: not all columns in", SNV,"are numeric. Use only numeric data as input to ensure unexpected conversion does not occur."))
     }
-    dm <- dm[ as.character(dm[,"chr"]) %in% as.character(seq(22)), ];
+    dm <- dm[ as.character(dm[,"chr"]) %in% as.character(seq(100)), ];
     dm=data.matrix(dm);
     print("Only SNVs with autosomal coordinates included.")
     if(is.null(snvF)){
@@ -105,9 +105,6 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
   }
   
   
-  if (is.na(precision)){
-    precision=0.1/log(nrow(dm)/7);
-  }
   if(nrow(dm)<20){
     print("Not enough mutations provided. Minimum 20 SNVs required to attempt a run.")
     return(nullResult);
@@ -116,7 +113,7 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
   ##Regions of interest
   if (is.character(region) && file.exists(region)){
     roi=read.table(region,sep="\t",header=TRUE,stringsAsFactors = FALSE);
-    roi <- roi[ as.character(roi[,"chr"]) %in% as.character(seq(22)), ];
+    roi <- roi[ as.character(roi[,"chr"]) %in% as.character(seq(100)), ];
     roi=data.matrix(roi);
   }else if (is.matrix(region)){
     roi=region;
@@ -159,25 +156,29 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
       print(paste("Input contains less than ",maxN," SNVs. Parameter <region> ignored."));
     }
   }
+  if (is.na(precision)){
+    precision=0.1/log(length(idx_R)/7);
+  }
+  print(paste('Peak selection strategy: ',peakselection))
   
   #############################
   ###Input parsing ends here###
-  dm=dm[idx_R,]
+  #dm=dm[idx_R,]
   cfd=computeCellFrequencyDistributions(dm, max_PM, precision, min_CellFreq=min_CellFreq);
   toUseIdx=which(apply(is.finite(cfd$densities),1,all) );
-  ##toUseIdx=intersect(toUseIdx,idx_R);
+  toUseIdx=intersect(toUseIdx,idx_R);
   SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_CellFreq);
-  if(is.null(SPs) || size(SPs,1)==0){
+  if(is.null(SPs) || size(SPs,1)==0 || all(is.na(SPs))){
     print("No SPs found.")
     result=list("finalSPs"=NULL,"dm"=cfd$dm,"densities"=cfd$densities);
     return(result);
   }
-  if(is.null(dim(SPs))){
+  if(is.null(dim(SPs)) || nrow(SPs)==1){
     finalSPs=SPs[SPs["score"]<=maxScore];
   }else{
     finalSPs=SPs[SPs[,"score"]<=maxScore,];
   }
-  if(!is.null(dim(finalSPs))){
+  if(!is.null(dim(finalSPs)) && nrow(finalSPs)>1){
     ia=order(finalSPs[,"Mean Weighted"]);
     finalSPs=matrix(finalSPs[ia,],nrow=nrow(finalSPs), ncol=ncol(finalSPs), dimnames=list(1:nrow(finalSPs),colnames(finalSPs)));
   }
@@ -188,8 +189,43 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
   }
   ###########################
   ###Assigning SNVs to SPs###
-  aM = assignMutations( cfd$dm, finalSPs);
-  dm=aM$dm; finalSPs=aM$finalSPs;
+  aM = assignMutations( cfd$dm, finalSPs,peakselection=peakselection);
+  dm=aM$dm; SPs=aM$finalSPs;
+  
+  ###########################
+  ##Choose between doublets##
+  continueprune=TRUE;
+  while (!is.null(dim(SPs)) && nrow(SPs)>1 && continueprune){
+    x=sort(SPs[,'Mean Weighted'],index.return=TRUE);   SPs=SPs[x$ix,];
+    toRm=c();
+    for  (sp in 1:nrow(SPs)){
+      ii=sp; ##sp_i * x != sp_j for all x in 2:6 and all SP pairs (i,j)
+      x=2; ##Check for doublets only
+      maxDev=SPs[sp,'precision']* 2/3 ;
+      i_=which(abs(SPs[sp,'Mean Weighted']*x-SPs[,'Mean Weighted'])<maxDev);
+      ii=union(ii,i_); 
+      if( length(ii)>1 ){
+        ii=ii[which(SPs[ii,'nMutations']<0.6*max(SPs[ii,'nMutations'],na.rm=T))];; ##Keep only SP of max kurtosis
+        toRm=c(toRm,ii )
+      }
+    }
+    
+    toRm=unique(toRm)
+    if (!is.null(toRm) && length(toRm)>0){
+      iReassign=which(dm[,'SP'] %in% SPs[toRm,'Mean Weighted'] | dm[,'SP_cnv'] %in% SPs[toRm,'Mean Weighted'] );
+      print(paste('Reassigning SNVs after pruning',length(toRm),'doublet subpopulation(s). Pruned subpopulation(s):'))
+      print(SPs[toRm,'Mean Weighted'])
+      SPs=SPs[-toRm,, drop=FALSE];
+      aM = assignMutations( dm[iReassign,,drop=FALSE], SPs, peakselection=peakselection);
+      dm[iReassign,]=aM$dm; 
+      iSP=match(aM$finalSPs[,'Mean Weighted'],SPs[,'Mean Weighted']);
+      SPs[iSP,'nMutations']=SPs[iSP,'nMutations']+aM$finalSPs[,'nMutations'];
+      finalSPs=SPs;
+    }else{
+      continueprune=FALSE;
+      finalSPs=SPs;
+    }
+  }
   
   #if (plotF>2){
   #    if(!require(rgl)){
@@ -209,18 +245,35 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
   #}
   
   ##phylogeny
+  finalSPs=.addColumn(finalSPs,'Ancestor',NA);
+  finalSPs=.addColumn(finalSPs,'ClosestDescendant',NA);
   aQ=try(assignQuantityToSP(copyNumber, dm),silent=FALSE);
   tr=NULL;
   if(class(aQ)=="try-error" || is.null(ncol(aQ$ploidy))){
-    print("Error encountered while reconstructing phylogeny")
+    print("Error encountered while assigning subpopulation specific ploidy to copy number segments. Phylogeny will not be inferred.")
   }else {
     dm=aQ$dm;
     aQ=aQ$ploidy;
+    .writeExpandsOutput(X=aQ, dirF,snvF,suffix=".sps.cbs", message="Subpopulation specific copy numbers")
     output=paste(dirF, .Platform$file.sep, snvF, sep="");    # output=paste(dirF, .Platform$file.sep, gsub("\\.","_",snvF), sep="");
     tr=try(buildPhylo(aQ,output,dm=dm),silent=FALSE);
     if(class(tr)!="try-error" ){
       if(class(tr$dm)!="try-error" && !is.na(tr$dm)){
         dm=tr$dm;
+        ##Assign ancestor and closest descendant
+        phySPs=colnames(tr$spRelations)
+        for (sp in rownames(tr$spRelations)){
+          desc=as.numeric(gsub('SP_','',c(sp,phySPs[tr$spRelations[sp,]==1])))
+          if(length(desc)>1){
+            iAnc=which.min(abs(finalSPs[,'Mean Weighted']-desc[1]))
+            desc=desc[which.min(abs(desc[2:length(desc)]-desc[1]))+1]
+            iDesc=which.min(abs(finalSPs[,'Mean Weighted']-desc))
+            finalSPs[iDesc,'Ancestor']=finalSPs[iAnc,'Mean Weighted']
+            finalSPs[iAnc,'ClosestDescendant']=finalSPs[iDesc,'Mean Weighted']
+          }
+        }
+      }else{
+        print("Error encountered while reconstructing phylogeny")
       }
       tr=tr$tree;
     }
@@ -228,10 +281,7 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
   
   ####################
   ###Write output#####
-  output=paste(dirF, .Platform$file.sep, snvF,".sps",sep="");
-  write(paste("## expands version",packageVersion("expands")), file = output);
-  suppressWarnings(write.table(dm,file = output, append=TRUE, quote = FALSE, sep = "\t", row.names=FALSE));
-  print(paste("Output saved under ",output));
+  .writeExpandsOutput(X=dm, dirF,snvF,suffix=".sps", message="Subpopulation specific point mutations")
   
   if (plotF>0){
     try(plotSPs(dm[toUseIdx,],snvF),silent=FALSE);
@@ -242,4 +292,11 @@ runExPANdS<-function(SNV, CBS, maxScore=2.5, max_PM=6, min_CellFreq=0.1, precisi
   
   result=list("finalSPs"=finalSPs,"dm"=dm,"densities"=cfd$densities,"ploidy"=aQ,"tree"=tr,"homDelRegions"=homDelRegions);
   return(result);
+}
+
+.writeExpandsOutput<-function(X, dirF,snvF,suffix=".sps.cbs", message="Output"){
+  output=paste(dirF, .Platform$file.sep, snvF,suffix,sep="");
+  write(paste("## expands version",packageVersion("expands")), file = output, append=FALSE);
+  suppressWarnings(write.table(X,file = output, append=TRUE, quote = FALSE, sep = "\t", row.names=FALSE));
+  print(paste(message," saved under ",output));
 }

@@ -2,8 +2,8 @@
 \alias{buildPhylo}
 \title{Relations between subpopulations}
 \description{Predicts phylogenetic relations between subpopulations from subpopulation specific copy number profiles.}
-\usage{buildPhylo(ploidy, outF, treeAlgorithm="bionjs", dm=NA)}
-\arguments{
+\usage{buildPhylo(ploidy, outF, treeAlgorithm="bionjs", dm=NA, add="Germline")
+}\arguments{
   \item{ploidy}{
        Ploidy-matrix in which each row corrsponds to a copy number segment. Has to contain at least one column for each predicted subpopulation. Subpopulation columnnames must be labeled SP_xx, where xx is the size of the corresponding subpopulation. Ploidy-matrix can be obtained by calling \code{\link{assignQuantityToSP}}. 
 }
@@ -22,6 +22,9 @@
         \bold{PM} - the total ploidy of all alleles at the mutated genomic locus, in the assigned subpopulation.\cr
 		\bold{PM_B} - the ploidy of the B-allele at the mutated genomic locus, in the assigned subpopulation.\cr  
          If dm is available, an attempt will be made to: i) assign total ploidy (PM) to subpopulations with point mutations and ii) assign every mutation to >1 subpopulation according to the inferred phylogenetic relations between subpopulations. Default: NA.
+}
+  \item{add}{
+       Artificial subpopulation to be included in phylogeny (options: 'Germline','Consensus', NULL).
 }
 }
 \details{

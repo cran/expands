@@ -104,7 +104,7 @@ Now we plot the coexistent subpopulations predicted in the previous steps.
 plotSPs(aM$dm, snvF,cex=1)
 @
 \caption{\label{f4.3} 
-Coexistent subpopulations determined by ExPANdS in an Glioblastoma genome. Five subpopulations were identified based on the allele-frequency and copy number of 130 mutations detected within the cancer-genome. Subpopulations were present in 98\%, 77\%, 46\%, 28\% and 12\% of the sample (y-axis). For each of the 130 exonic mutations (x-axis) we show: - the subpopulation to which the mutation has been assigned (squares), - the ploidy of the locus in that subpopulation and - the allele frequency of the mutation. Allele frequencies and ploidities are colored based on the chromosome on which the mutation is located (stars - somatic SNVs, triangles - LOH). Subpopulations are colored based on the confidence with which the mutation has been assigned to the subpopulation (black - highest, white - lowest).
+Coexistent subpopulations determined by ExPANdS in an Glioblastoma genome. Five subpopulations were identified based on the allele-frequency and copy number of 130 mutations detected within the cancer-genome. Subpopulations were present in 98\%, 77\%, 46\%, 28\% and 12\% of the sample (y-axis). For each of the 130 exonic mutations (x-axis) we show: - the subpopulation to which the mutation has been assigned (squares), - the ploidy of the locus in that subpopulation and - the allele frequency of the mutation. Allele frequencies and ploidities are colored based on the average copy number measured for the genomic segment within which the mutation is located (stars - somatic SNVs, triangles - LOH). Subpopulations are colored based on the confidence with which the mutation has been assigned to the subpopulation (black - highest, white - lowest).
 }
 \end{center}
 \end{figure}
@@ -128,7 +128,7 @@ Finally we plot the phyloegentic tree.
 plot(spPhylo$tree,cex=2.5)
 @
 \caption{\label{f4.3}
-Phylogram representation of the inferred relations between the five predicted SPs. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
+Phylogram representation of the inferred relations between the five predicted SPs. Each branch spans proportional to the amount of ploidy change between SPs. The germline ploidy profile (assumed diploid throughout the genome) is included as control.
 }
 \end{center}
 \end{figure}
@@ -167,14 +167,14 @@ Finally plot the inter-sample phylogeny:
 plot(tr, tip.col = colors, cex = 1.6, type = "u")
 @
 \caption{\label{f4.3}
-         Phylogram representation of the inferred relations between SPs from three distinct geographical samples. Each branch spans proportional to the amount of ploidy change between SPs. The mean ploidy profile among all predicted SPs (Consensus SP) is included as control.
+         Phylogram representation of the inferred relations between SPs from three distinct geographical samples. Each branch spans proportional to the amount of ploidy change between SPs. The germline ploidy profile (assumed diploid throughout the genome) is included as control.
 }
 \end{center}
 \end{figure}
 
 \newpage
 \section{Acknowledgements}
-Special thanks to Dr. Ruchira S. Datta for her valuable contributions to the structure and presentation of this manuscript.
+Special thanks to Dr. Ryan Morin for his contributions that have led to higher accuracy measures during simulations for mutation assignment to subpopulations, as well as advanced visualization features of assigned mutations. Thanks also to Dr. Ruchira S. Datta for her valuable contributions to the structure and presentation of this manuscript.
 
  \begin{thebibliography}{1}
 

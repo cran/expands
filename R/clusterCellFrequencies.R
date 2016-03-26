@@ -1,8 +1,8 @@
 clusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0.1){ ##, plotF=0
-#   if(plotF>0 && !require(rgl)){
-#   	plotF=0;
-#   	message("Plot supressed:  Package rgl required for 3D plot of subpopulation clusters. Load this package befor using this option.")
-#   }
+  #   if(plotF>0 && !require(rgl)){
+  #   	plotF=0;
+  #   	message("Plot supressed:  Package rgl required for 3D plot of subpopulation clusters. Load this package befor using this option.")
+  #   }
   freq=as.numeric(colnames(densities));
   print(paste("Clustering ",nrow(densities),"probability distributions..."))
   cols=c("red","yellow","green","pink","magenta","cyan","lightblue","blue");
@@ -60,7 +60,7 @@ clusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0
       Tx=kmeans(densitiesOk[,idx], centers=2, nstart =10);
       Tx=Tx$cluster;
       if (length(unique(Tx))!=2 || length(which(Tx==1))<=1 ||
-            length(which(Tx==2))<=1){
+          length(which(Tx==2))<=1){
         next; #second cluster step unsuccessfull for this range;
       }
       
@@ -75,19 +75,19 @@ clusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0
       tryCatch({   
         ##find peak range of cluster
         maxCl=apply(peakCl,2,mean,na.rm=T);
-        x=apply(peakCl[,idx],1,max);
-        y=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,max);
+        x=apply(peakCl[,idx],1,max,na.rm=T);  
+        y=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,max,na.rm=T);  
         zz=wilcox.test(x,y,conf.level=0.99,alternative="greater");
         
-        x2=apply(peakCl[,idx],1,mean);
-        y2=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,mean);  
+        x2=apply(peakCl[,idx],1,mean,na.rm=T);  
+        y2=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,mean,na.rm=T);  
         zz2=wilcox.test(x2,y2,conf.level=0.99,alternative="greater");
         
         x3=apply(peakCl[,idx],1,sum);
         y3=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,sum);              
         zz3=wilcox.test(x3,y3,conf.level=0.99,alternative="greater");
-        kurt=apply(peakCl[,idx],1,kurtosis);
-        kurtNoise=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,kurtosis);
+        kurt=apply(peakCl[,idx],1,kurtosis,na.rm=T);
+        kurtNoise=apply(peakCl[,setdiff(c(1:length(freq)),idx)],1,kurtosis,na.rm=T);
         zzK=wilcox.test(kurt,kurtNoise,conf.level=0.99,alternative="greater");
         
         SPs[k,]=c(peak,meanClPeak,wMean, zz$p.value,zz2$p.value,zz3$p.value,zzK$p.value,max(kurt),max(kurtNoise),mean(kurt),mean(kurtNoise),nrow(peakCl),precision, score);
@@ -100,11 +100,11 @@ clusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0
         }
         SPs[k,"score"]=score;
         
-#         #plot option
-#         if (exists("plotF") && plotF>0 && nrep==tRep){
-#            col=cols[mod(k,length(cols))+1];
-#            count=.addTo3DPlot(count,clusterM,freq,col);
-#         }
+        #         #plot option
+        #         if (exists("plotF") && plotF>0 && nrep==tRep){
+        #            col=cols[mod(k,length(cols))+1];
+        #            count=.addTo3DPlot(count,clusterM,freq,col);
+        #         }
       },error = function(e) {
         print(e);
       })
@@ -124,23 +124,22 @@ clusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0
     return(NULL);
   }
   
-#   ##plot option
-#   if (plotF>0){
-#     title3d("",label);
-#   }
+  #   ##plot option
+  #   if (plotF>0){
+  #     title3d("",label);
+  #   }
   
   robSPs=.chooseRobustSPs(allSPs,precision,min_CellFreq);
   SPs=.collapseSimilar(robSPs$SPs,precision);
   
   outcols=c("Mean Weighted","score","precision","nMutations");##printlay only these columns
-  if (is.null(dim(SPs))){
+  if (is.null(dim(SPs)) || nrow(SPs)==1){
     SPs=SPs[outcols];
   }else{
     SPs=SPs[,outcols];
   }
+  
   print("Done.");
-  ##print(SPs);
-  ##out=list("SPs"=SPs,"spGrid"=robSPs$spGrid);
   return(SPs);
 }
 
@@ -165,9 +164,9 @@ clusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0
   for (i in 1:length(allSPs)){
     SPs=allSPs[[i]];
     if(is.null(dim(SPs))){
-#       if(SPs["Mean Weighted"]>1){ ##Should no longer be necessary
-#         SPs["Mean Weighted"]=1; 
-#       }
+      #       if(SPs["Mean Weighted"]>1){ ##Should no longer be necessary
+      #         SPs["Mean Weighted"]=1; 
+      #       }
       idx=which.min(abs(SPs["Mean Weighted"]-freq));
       SPsizes[i,idx]=SPs["score"];
     }else{
