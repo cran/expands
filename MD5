@@ -1,4 +1,4 @@
-be1fad259e85a052a6954bc2f91bb1a7 *DESCRIPTION
+a311d62df8adbe34b7009427856b5dd9 *DESCRIPTION
 2870c3eac9343e6a70c9a913e29669cf *NAMESPACE
 eb3d8293dcfea68f20d99d8152e6f4e4 *R/addColumn.R
 04855a38c0200221d3315cf4b03641d6 *R/assignMutations.R
@@ -11,7 +11,7 @@ e1204e031a85a4119bd8d97934917e55 *R/assignQuantityToMutation.R
 6bd3a9c451dab07f9586b75be34839f1 *R/computeCellFrequencyDistributions.R
 f7bf2d6192a657f1850cca805ddf220b *R/onLoad.R
 996ea85a6c9a22c5461d9b68f4ec285f *R/plotSPs.R
-54bd59205e05cc47cf37820ae844466b *R/runExPANdS.R
+8bb1f7eeb61f56b0c46e6e041c5747b2 *R/runExPANdS.R
 ab9b341bfd4c3b08d33af8c497bc1261 *R/sysdata.rda
 82132b0f9ff691dac132fbfff1766f49 *build/vignette.rds
 664284e0624f9ce0762af69e78b0b03e *data/cbs.rda
@@ -19,7 +19,7 @@ e49b6d61d3960c03b775dc15a5b65cc9 *data/simulation.rda
 6fb02c3ab0905057bf173dd43c1b8908 *data/snv.rda
 cead9f2d19c07d79160b8b5d08eb950a *inst/doc/expands.R
 ec01566c18bef2c259a6eeed53dad678 *inst/doc/expands.Rnw
-7042c2af58502faf5d03461fd854edb0 *inst/doc/expands.pdf
+720aa4401f3b2587934a43c9bc8abf16 *inst/doc/expands.pdf
 11db04b858019c53da76bc4569b573f2 *inst/java/expands.jar
 4433428a9d9b3b5d77fef3df68ec4d58 *java/Common.java
 58240be1d11c5f5f318ef07529255a45 *java/ExPANdS.java
