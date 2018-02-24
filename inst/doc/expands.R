@@ -18,7 +18,7 @@ dm=assignQuantityToMutation(snv,cbs,"CN_Estimate");
 ### code chunk number 2: expands.Rnw:57-62
 ###################################################
 ##parameters
-max_PM=6; maxScore=2; precision=0.018;
+max_PM=6; maxS=0.7; precision=0.018;
 plotF=1; 
 ##the name of the sample
 snvF="TCGA-06-0152-01";
@@ -28,7 +28,7 @@ snvF="TCGA-06-0152-01";
 ### code chunk number 3: expands.Rnw:68-70
 ###################################################
 ##calculate cell frequency probability distribution for each mutation
-cfd=computeCellFrequencyDistributions(dm, max_PM, precision)
+cfd=computeCellFrequencyDistributions(dm, max_PM, p=precision)
 
 
 ###################################################
@@ -41,8 +41,8 @@ toUseIdx=which(apply(is.finite(cfd$densities),1,all) )
 ###################################################
 ### code chunk number 5: expands.Rnw:81-83
 ###################################################
-SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision)
-SPs=SPs[SPs[,"score"]<=maxScore,]; ## exclude SPs detected at high noise levels
+SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], p=precision)
+SPs=SPs[SPs[,"score"]<=maxS,]; ## exclude SPs detected at high noise levels
 
 
 ###################################################
@@ -55,7 +55,7 @@ print(SPs)
 ### code chunk number 7: expands.Rnw:91-93
 ###################################################
 ##assign mutations to subpopulations:
-aM= assignMutations( dm, SPs)
+aM= assignMutations( dm, SPs, verbose = F)
 
 
 ###################################################
@@ -68,7 +68,7 @@ o=plotSPs(aM$dm, snvF,cex=1)
 ### code chunk number 9: expands.Rnw:115-117
 ###################################################
 ##assigning copy number to subpopulations
-aQ=assignQuantityToSP(cbs, aM$dm)
+aQ=assignQuantityToSP(cbs, aM$dm, v=F)
 
 
 ###################################################
@@ -81,7 +81,7 @@ spPhylo=buildPhylo(aQ,snvF,add = NULL)
 ###################################################
 ### code chunk number 11: expands.Rnw:127-128
 ###################################################
-plot(spPhylo$tree,cex=1.5,type = "c")
+plot(spPhylo$tree,cex=3,type = "c")
 
 
 ###################################################
@@ -101,7 +101,7 @@ sps=as.list(paste(patient, samples,'.sps',sep=""));
 ### code chunk number 13: expands.Rnw:150-161
 ###################################################
 sampleGroup=list(cbs=cbs,sps=sps,labels=samples)
-tr=buildMultiSamplePhylo(sampleGroup,output,ambig = F, plotF=0);
+tr=buildMultiSamplePhylo(sampleGroup,output,e = 0, plotF=0);
 ##Tree tip color labels according to sample origin of SPs:
 jet <- colorRampPalette(c("#00007F", "blue", "#007FFF",
             "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
