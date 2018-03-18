@@ -1,7 +1,7 @@
 Package: expands
 Type: Package
 Title: Expanding Ploidy and Allele-Frequency on Nested Subpopulations
-Version: 2.1.0
+Version: 2.1.1
 Date: 2018-02-23
 Author: Noemi Andor
 Maintainer: Noemi Andor <expands.r@gmail.com>
@@ -16,8 +16,8 @@ Imports: flexclust, plyr, RColorBrewer, gplots, NbClust, moments (>=
         ape (>= 3.2), commonsMath (>= 1.1), parallel
 Suggests: phylobase (>= 0.6.8)
 SystemRequirements: Java (>= 5.0)
-Packaged: 2018-02-24 00:37:12 UTC; noemi
+Packaged: 2018-03-18 05:22:49 UTC; noemi
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2018-02-24 21:25:57 UTC
+Date/Publication: 2018-03-18 19:30:09 UTC
 RoxygenNote: 6.0.1
